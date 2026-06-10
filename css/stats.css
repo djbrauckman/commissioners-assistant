@@ -1,0 +1,184 @@
+/* stats.css — Stats page specific styles */
+
+.stats-container { max-width: 1100px; margin: 0 auto; }
+
+/* ── Load form ── */
+.load-form {
+  display: grid;
+  grid-template-columns: 1fr 120px auto;
+  gap: 10px; align-items: end;
+  margin-bottom: 1.5rem;
+}
+@media (max-width: 560px) { .load-form { grid-template-columns: 1fr; } }
+
+/* ── Progress bar ── */
+.progress-wrap {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 1.25rem;
+  margin-bottom: 1.25rem;
+  display: none;
+}
+.progress-label { font-size: 13px; color: var(--text-muted); margin-bottom: 8px; }
+.progress-bar-track {
+  height: 6px; background: var(--border);
+  border-radius: 99px; overflow: hidden;
+}
+.progress-bar-fill {
+  height: 100%; background: var(--green);
+  border-radius: 99px;
+  transition: width 0.3s ease;
+  width: 0%;
+}
+
+/* ── Manager grid ── */
+.manager-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 14px;
+  margin-bottom: 1.5rem;
+}
+
+.manager-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 1.25rem;
+  box-shadow: var(--shadow-sm);
+  cursor: pointer;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.manager-card:hover { border-color: var(--border-mid); box-shadow: var(--shadow-md); }
+.manager-card.selected { border-color: var(--green); box-shadow: 0 0 0 3px rgba(26,127,90,0.1); }
+
+.manager-card-header {
+  display: flex; justify-content: space-between;
+  align-items: flex-start; margin-bottom: 12px;
+}
+.manager-name { font-size: 15px; font-weight: 600; letter-spacing: -0.01em; }
+.manager-record {
+  font-size: 12px; font-weight: 500;
+  font-family: 'DM Mono', monospace;
+  color: var(--text-muted);
+}
+.manager-record.winning { color: var(--green); }
+.manager-record.losing  { color: var(--red); }
+
+/* ── Position bar chart ── */
+.pos-bar-wrap { margin-bottom: 12px; }
+.pos-bar-label {
+  display: flex; justify-content: space-between;
+  font-size: 11px; color: var(--text-muted);
+  margin-bottom: 4px; font-family: 'DM Mono', monospace;
+}
+.pos-bar-track {
+  height: 8px; background: var(--surface-2);
+  border-radius: 99px; overflow: hidden;
+  display: flex;
+}
+.pos-bar-seg { height: 100%; transition: width 0.4s ease; }
+
+/* Position colors */
+.pos-qb  { background: #E8614A; }
+.pos-rb  { background: #3B82F6; }
+.pos-wr  { background: #8B5CF6; }
+.pos-te  { background: #F59E0B; }
+.pos-flex{ background: #6366F1; }
+.pos-k   { background: #10B981; }
+.pos-def { background: #6B7280; }
+
+.pos-legend {
+  display: flex; flex-wrap: wrap; gap: 8px;
+  margin-top: 8px;
+}
+.pos-legend-item {
+  display: flex; align-items: center; gap: 4px;
+  font-size: 11px; color: var(--text-muted);
+}
+.pos-legend-dot { width: 8px; height: 8px; border-radius: 2px; }
+
+/* ── Manager stat chips ── */
+.manager-chips { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+.manager-chip {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 5px 10px;
+  font-size: 11px; color: var(--text-muted);
+}
+.manager-chip span {
+  font-size: 14px; font-weight: 600;
+  color: var(--text); display: block;
+  font-family: 'DM Mono', monospace;
+}
+
+/* ── Detail panel ── */
+.detail-panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+  box-shadow: var(--shadow-sm);
+  display: none;
+}
+.detail-panel.visible { display: block; }
+.detail-header {
+  display: flex; justify-content: space-between;
+  align-items: center; margin-bottom: 1.25rem;
+}
+.detail-title { font-size: 18px; font-weight: 600; letter-spacing: -0.02em; }
+.detail-close {
+  background: none; border: none; font-size: 20px;
+  color: var(--text-muted); cursor: pointer; line-height: 1;
+  padding: 4px;
+}
+
+/* ── Weekly table ── */
+.weekly-table-wrap { overflow-x: auto; margin-top: 1rem; }
+table {
+  width: 100%; border-collapse: collapse;
+  font-size: 13px;
+}
+th {
+  text-align: left; padding: 8px 10px;
+  font-size: 11px; font-weight: 500; letter-spacing: 0.05em;
+  text-transform: uppercase; color: var(--text-muted);
+  border-bottom: 1px solid var(--border);
+  font-family: 'DM Mono', monospace;
+}
+td {
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--border);
+  font-family: 'DM Mono', monospace;
+  font-size: 12px;
+}
+tr:last-child td { border-bottom: none; }
+tr:hover td { background: var(--surface-2); }
+
+.eff-high { color: var(--green);  font-weight: 600; }
+.eff-mid  { color: var(--amber);  }
+.eff-low  { color: var(--red);    }
+
+/* ── League summary table ── */
+.summary-section { margin-bottom: 1.5rem; }
+.summary-section h3 {
+  font-size: 14px; font-weight: 600; margin-bottom: 10px;
+  letter-spacing: -0.01em;
+}
+
+/* ── Section header ── */
+.section-header {
+  display: flex; justify-content: space-between;
+  align-items: center; margin-bottom: 1rem;
+}
+.section-title { font-size: 16px; font-weight: 600; letter-spacing: -0.02em; }
+.section-meta  { font-size: 13px; color: var(--text-muted); }
+
+/* ── Empty / error states ── */
+.state-empty {
+  text-align: center; padding: 3rem 1rem;
+  color: var(--text-muted); font-size: 14px;
+}
+.state-empty strong { display: block; font-size: 16px; color: var(--text); margin-bottom: 6px; }

@@ -17,6 +17,9 @@
     <p>Division randomizer · Schedule generator · Rivalry week</p>
   </header>
 
+  <!-- Navigation -->
+  <nav id="main-nav" style="display:flex; gap:6px; margin-bottom:2rem;"></nav>
+
   <!-- ── Step 1: League Setup ── -->
   <div id="step1" class="card">
     <div class="step-header">
@@ -112,42 +115,11 @@
     </div>
   </div>
 
-  <!-- ── Step 4: Sleeper / Rivalry Week ── -->
-  <div id="sleeperSection" class="card" style="display:none">
-    <div class="step-header">
-      <div class="step-badge" id="badge4">4</div>
-      <span class="step-title">Rivalry week — import last season's standings</span>
-    </div>
-
-    <p style="font-size:13px; color:var(--color-text-muted); margin-bottom:14px">
-      Enter your Sleeper league ID to pull last season's division standings and
-      generate Week 15 matchups: #1 seed vs #1 seed, #2 vs #2, etc.
-    </p>
-
-    <div class="sleeper-row">
-      <div>
-        <div class="label">Sleeper league ID</div>
-        <input type="text" id="sleeperLeagueId" placeholder="e.g. 1234567890" />
-      </div>
-      <div>
-        <div class="label">Season year</div>
-        <input type="number" id="sleeperSeason" placeholder="2024" style="width:90px" />
-      </div>
-      <button class="btn-primary" onclick="loadSleeperStandings()" style="margin-bottom:0">
-        Load standings →
-      </button>
-    </div>
-
-    <div id="sleeperStatus"></div>
-
-    <div id="standingsPreview" class="div-grid" style="margin-top:14px"></div>
-  </div>
-
-</div>
-
+<script src="js/nav.js"></script>
 <script src="js/divisions.js"></script>
 <script src="js/schedule.js"></script>
 <script src="js/sleeper.js"></script>
 <script src="js/app.js"></script>
+<script>initNav('schedule');</script>
 </body>
 </html>

@@ -43,6 +43,21 @@ body {
 
 .container { max-width: 780px; margin: 0 auto; }
 
+/* ── Nav ── */
+.nav-link {
+  padding: 7px 16px;
+  border-radius: var(--radius-md);
+  font-size: 13px; font-weight: 500;
+  text-decoration: none;
+  color: var(--text-muted);
+  border: 1px solid transparent;
+  transition: background 0.15s, color 0.15s;
+}
+.nav-link:hover { background: var(--surface); color: var(--text); border-color: var(--border); }
+.nav-link--active { background: var(--surface); color: var(--text); border-color: var(--border-mid); }
+.nav-link--disabled { opacity: 0.4; pointer-events: none; cursor: default; }
+.nav-soon { font-size: 9px; color: var(--text-faint); vertical-align: super; margin-left: 2px; }
+
 /* ── Header ── */
 .app-header { margin-bottom: 2.25rem; }
 .app-header h1 {
