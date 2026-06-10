@@ -1,0 +1,157 @@
+/* dues.css — Dues tracker specific styles */
+
+/* ── Setup form ── */
+.dues-setup-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+@media (max-width: 560px) { .dues-setup-grid { grid-template-columns: 1fr; } }
+
+/* ── Summary bar ── */
+.dues-summary {
+  display: flex; gap: 10px; flex-wrap: wrap;
+  margin-bottom: 1.5rem;
+}
+.dues-chip {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 10px 16px;
+  font-size: 12px; color: var(--text-muted);
+  box-shadow: var(--shadow-sm);
+  min-width: 100px;
+}
+.dues-chip span {
+  font-size: 20px; font-weight: 600;
+  color: var(--text); display: block;
+  font-family: 'DM Mono', monospace;
+  letter-spacing: -0.02em; margin-bottom: 2px;
+}
+.dues-chip.highlight span { color: var(--green); }
+.dues-chip.warn-chip span  { color: var(--red); }
+
+/* ── Manager dues table ── */
+.dues-table-wrap {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+  margin-bottom: 1.5rem;
+}
+.dues-table {
+  width: 100%; border-collapse: collapse;
+}
+.dues-table th {
+  text-align: left; padding: 10px 16px;
+  font-size: 11px; font-weight: 500;
+  letter-spacing: 0.05em; text-transform: uppercase;
+  color: var(--text-muted); background: var(--surface-2);
+  border-bottom: 1px solid var(--border);
+  font-family: 'DM Mono', monospace;
+}
+.dues-table td {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+  font-size: 14px; vertical-align: middle;
+}
+.dues-table tr:last-child td { border-bottom: none; }
+.dues-table tr:hover td { background: var(--surface-2); }
+
+.manager-col { font-weight: 500; }
+.amount-col  { font-family: 'DM Mono', monospace; font-size: 13px; }
+
+/* ── Toggle ── */
+.paid-toggle {
+  display: inline-flex; align-items: center;
+  gap: 8px; cursor: pointer;
+}
+.toggle-track {
+  width: 40px; height: 22px;
+  background: var(--border-mid);
+  border-radius: 99px;
+  position: relative;
+  transition: background 0.2s;
+  flex-shrink: 0;
+}
+.toggle-track.on { background: var(--green); }
+.toggle-thumb {
+  width: 16px; height: 16px;
+  background: white;
+  border-radius: 50%;
+  position: absolute;
+  top: 3px; left: 3px;
+  transition: transform 0.2s;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+}
+.toggle-track.on .toggle-thumb { transform: translateX(18px); }
+.toggle-label {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+.toggle-label.paid { color: var(--green); font-weight: 500; }
+
+/* ── Payout table ── */
+.payout-section {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 1.25rem;
+  margin-bottom: 1.5rem;
+  box-shadow: var(--shadow-sm);
+}
+.payout-section h3 {
+  font-size: 14px; font-weight: 600;
+  margin-bottom: 1rem; letter-spacing: -0.01em;
+}
+.payout-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+@media (max-width: 480px) { .payout-grid { grid-template-columns: 1fr; } }
+
+.payout-card {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 14px;
+  text-align: center;
+}
+.payout-place {
+  font-size: 11px; font-weight: 500;
+  text-transform: uppercase; letter-spacing: 0.06em;
+  color: var(--text-muted); margin-bottom: 4px;
+}
+.payout-place.first  { color: #A86300; }
+.payout-place.second { color: var(--text-muted); }
+.payout-place.third  { color: #7A4800; }
+.payout-amount {
+  font-size: 22px; font-weight: 600;
+  font-family: 'DM Mono', monospace;
+  letter-spacing: -0.03em; color: var(--text);
+}
+.payout-winner {
+  font-size: 12px; color: var(--text-muted);
+  margin-top: 6px; min-height: 18px;
+}
+.payout-input-row {
+  display: flex; align-items: center; gap: 8px;
+  margin-top: 8px;
+}
+.payout-input-row input {
+  width: 100%; text-align: center;
+  font-family: 'DM Mono', monospace;
+}
+.payout-pct {
+  font-size: 11px; color: var(--text-faint);
+  margin-top: 4px;
+}
+
+/* ── Progress ── */
+.dues-progress {
+  font-size: 13px; color: var(--text-muted);
+  padding: 8px 0; display: none;
+}

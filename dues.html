@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dues — Fantasy Commissioner Tool</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/styles.css" />
+  <link rel="stylesheet" href="css/dues.css" />
+</head>
+<body>
+<div class="container">
+
+  <header class="app-header">
+    <h1>Fantasy Commissioner Tool</h1>
+    <p>Division randomizer · Schedule generator · Rivalry week</p>
+  </header>
+
+  <nav id="main-nav" style="display:flex; gap:6px; margin-bottom:2rem;"></nav>
+
+  <!-- ── Step 1: Setup ── -->
+  <div class="card" id="setupCard">
+    <div class="step-header">
+      <div class="step-badge" id="setupBadge">1</div>
+      <span class="step-title">League setup</span>
+    </div>
+
+    <div class="dues-setup-grid">
+      <div>
+        <div class="label">Sleeper league ID</div>
+        <input type="text" id="duesLeagueId" placeholder="e.g. 1367188507650428928" />
+      </div>
+      <div>
+        <div class="label">Season</div>
+        <input type="number" id="duesSeason" placeholder="2025" />
+      </div>
+      <div>
+        <div class="label">Dues per manager ($)</div>
+        <input type="number" id="duesAmount" placeholder="e.g. 50" min="0" step="1" />
+      </div>
+    </div>
+
+    <div class="btn-row">
+      <button class="btn-primary" onclick="handleDuesLoad()">Load league →</button>
+    </div>
+    <div id="duesLoadError" class="warn" style="display:none;margin-top:8px"></div>
+    <div id="duesLoadProgress" class="dues-progress">Fetching from Sleeper...</div>
+  </div>
+
+  <!-- ── Step 2: Dues tracker ── -->
+  <div id="duesTracker" style="display:none">
+
+    <!-- Summary chips -->
+    <div class="dues-summary" id="duesSummary"></div>
+
+    <!-- Manager table -->
+    <div class="dues-table-wrap">
+      <table class="dues-table">
+        <thead>
+          <tr>
+            <th>Manager</th>
+            <th>Dues owed</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody id="duesTableBody"></tbody>
+      </table>
+    </div>
+
+    <!-- Payout structure -->
+    <div class="payout-section">
+      <h3>Payout structure</h3>
+      <div class="payout-grid" id="payoutGrid"></div>
+      <div style="margin-top:12px;font-size:12px;color:var(--text-muted)" id="payoutRemainder"></div>
+    </div>
+
+    <!-- Actions -->
+    <div class="btn-row">
+      <button class="btn-secondary" onclick="exportDuesCSV()">↓ Export CSV</button>
+      <button class="btn-secondary" onclick="resetDues()">↺ Reset</button>
+    </div>
+
+  </div>
+
+</div>
+
+<script src="js/nav.js"></script>
+<script src="js/dues.js"></script>
+</body>
+</html>

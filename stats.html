@@ -53,12 +53,18 @@
   <div id="statsResults" style="display:none">
 
     <!-- Header -->
-    <div class="section-header" style="margin-bottom:1.25rem">
+    <div class="section-header" style="margin-bottom:1rem">
       <div>
         <div class="section-title" id="resultsTitle"></div>
         <div class="section-meta" id="resultsMeta"></div>
       </div>
       <button class="btn-secondary" onclick="exportStatsCSV()">↓ Export CSV</button>
+    </div>
+
+    <!-- Tab bar -->
+    <div style="display:flex;gap:6px;margin-bottom:1.25rem">
+      <button id="regularTabBtn" class="btn-secondary tab-active" onclick="switchTab('regular')">Regular Season</button>
+      <button id="playoffTabBtn" class="btn-secondary" onclick="switchTab('playoffs')" style="display:none">Playoffs</button>
     </div>
 
     <!-- Manager cards -->
