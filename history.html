@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>History — Fantasy Commissioner Tool</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/styles.css" />
+  <link rel="stylesheet" href="css/history.css" />
+</head>
+<body>
+<div class="container">
+
+  <header class="app-header">
+    <h1>Fantasy Commissioner Tool</h1>
+    <p>Division randomizer · Schedule generator · Rivalry week</p>
+  </header>
+
+  <nav id="main-nav" style="display:flex; gap:6px; margin-bottom:2rem;"></nav>
+
+  <!-- Load form -->
+  <div class="card">
+    <div class="step-header">
+      <div class="step-badge">1</div>
+      <span class="step-title">Load league history</span>
+    </div>
+    <p style="font-size:13px;color:var(--text-muted);margin-bottom:14px">
+      Walks your full <code>previous_league_id</code> chain to pull every season on record.
+    </p>
+    <div style="display:grid;grid-template-columns:1fr auto;gap:10px;align-items:end">
+      <div>
+        <div class="label">Sleeper league ID</div>
+        <input type="text" id="historyLeagueId" placeholder="e.g. 1367188507650428928" />
+      </div>
+      <button class="btn-primary" onclick="handleHistoryLoad()">Load history →</button>
+    </div>
+    <div id="historyLoadError" class="warn" style="display:none;margin-top:8px"></div>
+  </div>
+
+  <!-- Progress -->
+  <div class="history-progress" id="historyProgressWrap">
+    <div class="history-progress-label" id="historyProgressLabel">Loading...</div>
+    <div class="history-progress-track">
+      <div class="history-progress-fill" id="historyProgressFill"></div>
+    </div>
+  </div>
+
+  <!-- Results -->
+  <div id="historyResults" style="display:none">
+
+    <!-- Actions -->
+    <div style="display:flex;justify-content:flex-end;margin-bottom:1.25rem">
+      <button class="btn-secondary" onclick="exportHistoryCSV()">↓ Export CSV</button>
+    </div>
+
+    <!-- All-time records -->
+    <div class="history-section">
+      <div class="history-section-title">All-time records</div>
+      <div class="alltime-grid" id="allTimeGrid"></div>
+    </div>
+
+    <!-- H2H matrix -->
+    <div class="history-section">
+      <div class="history-section-title">Head-to-head matrix</div>
+      <p style="font-size:13px;color:var(--text-muted);margin-bottom:12px">
+        All-time regular season record for each row manager against each column manager.
+      </p>
+      <div class="matrix-wrap" id="h2hMatrixWrap"></div>
+    </div>
+
+    <!-- Season-by-season -->
+    <div class="history-section">
+      <div class="history-section-title">Season history</div>
+      <div class="season-list" id="seasonList"></div>
+    </div>
+
+  </div>
+
+</div>
+
+<script src="js/nav.js"></script>
+<script src="js/history.js"></script>
+<script src="js/history-ui.js"></script>
+</body>
+</html>

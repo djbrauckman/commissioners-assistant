@@ -8,7 +8,7 @@ const NAV_LINKS = [
   { key: 'schedule', label: 'Schedule', href: 'index.html' },
   { key: 'stats',    label: 'Stats',    href: 'stats.html' },
   { key: 'dues',     label: 'Dues',     href: 'dues.html' },
-  { key: 'history',  label: 'History',  href: 'history.html', disabled: true },
+  { key: 'history',  label: 'History',  href: 'history.html' },
 ];
 
 function initNav(activePage) {

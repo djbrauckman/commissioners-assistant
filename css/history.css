@@ -1,0 +1,168 @@
+/* history.css — League history page styles */
+
+/* ── Season cards ── */
+.season-list { display: flex; flex-direction: column; gap: 1.25rem; margin-bottom: 1.5rem; }
+
+.season-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+}
+.season-card-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 1rem 1.25rem;
+  background: var(--surface-2);
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+  user-select: none;
+}
+.season-card-header:hover { background: var(--border); }
+.season-year {
+  font-size: 16px; font-weight: 600;
+  letter-spacing: -0.02em;
+}
+.season-champion {
+  font-size: 13px; color: var(--amber);
+  font-weight: 500; display: flex; align-items: center; gap: 6px;
+}
+.season-toggle { font-size: 12px; color: var(--text-faint); }
+.season-card-body { padding: 1.25rem; display: none; }
+.season-card-body.open { display: block; }
+
+.season-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.25rem;
+}
+@media (max-width: 600px) { .season-grid { grid-template-columns: 1fr; } }
+
+.season-section h4 {
+  font-size: 11px; font-weight: 600; letter-spacing: 0.06em;
+  text-transform: uppercase; color: var(--text-faint);
+  margin-bottom: 10px; font-family: 'DM Mono', monospace;
+}
+
+/* ── Standings table ── */
+.standings-table { width: 100%; border-collapse: collapse; }
+.standings-table th {
+  text-align: left; padding: 6px 8px;
+  font-size: 10px; font-weight: 500; letter-spacing: 0.05em;
+  text-transform: uppercase; color: var(--text-muted);
+  border-bottom: 1px solid var(--border);
+  font-family: 'DM Mono', monospace;
+}
+.standings-table td {
+  padding: 7px 8px; font-size: 13px;
+  border-bottom: 1px solid var(--border);
+}
+.standings-table tr:last-child td { border-bottom: none; }
+.standings-table tr:hover td { background: var(--surface-2); }
+.rank-col { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--text-faint); width: 28px; }
+.record-col { font-family: 'DM Mono', monospace; font-size: 12px; color: var(--text-muted); }
+.pts-col { font-family: 'DM Mono', monospace; font-size: 12px; color: var(--text-muted); text-align: right; }
+
+/* ── Bracket results ── */
+.bracket-round { margin-bottom: 12px; }
+.bracket-round-label {
+  font-size: 10px; font-weight: 600; letter-spacing: 0.06em;
+  text-transform: uppercase; color: var(--text-faint);
+  margin-bottom: 6px; font-family: 'DM Mono', monospace;
+}
+.bracket-game {
+  display: flex; align-items: center; gap: 8px;
+  padding: 6px 10px; font-size: 13px;
+  background: var(--surface-2); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); margin-bottom: 4px;
+}
+.bracket-winner { font-weight: 600; color: var(--text); flex: 1; }
+.bracket-loser  { color: var(--text-muted); flex: 1; }
+.bracket-vs     { font-size: 10px; color: var(--text-faint); font-family: 'DM Mono', monospace; }
+.bracket-tag {
+  font-size: 10px; padding: 2px 6px; border-radius: 4px;
+  font-family: 'DM Mono', monospace; font-weight: 500; margin-left: auto;
+}
+.tag-champ   { background: var(--amber-bg);  color: var(--amber-text); }
+.tag-third   { background: var(--blue-bg);   color: var(--blue-text); }
+.tag-semi    { background: var(--surface-2); color: var(--text-muted); border: 1px solid var(--border); }
+.tag-wild    { background: var(--green-bg);  color: var(--green-text); }
+
+/* ── All-time records ── */
+.alltime-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 10px; margin-bottom: 1.5rem;
+}
+.alltime-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 12px 14px;
+  box-shadow: var(--shadow-sm);
+}
+.alltime-name { font-size: 14px; font-weight: 600; margin-bottom: 6px; letter-spacing: -0.01em; }
+.alltime-record {
+  font-size: 20px; font-weight: 600;
+  font-family: 'DM Mono', monospace;
+  letter-spacing: -0.03em; margin-bottom: 2px;
+}
+.alltime-record.winning { color: var(--green); }
+.alltime-record.losing  { color: var(--red); }
+.alltime-chips { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+.alltime-chip {
+  font-size: 11px; color: var(--text-muted);
+  background: var(--surface-2); border: 1px solid var(--border);
+  border-radius: 4px; padding: 3px 8px;
+}
+.alltime-chip strong { color: var(--text); }
+
+/* ── H2H matrix ── */
+.matrix-wrap { overflow-x: auto; margin-bottom: 1.5rem; }
+.matrix-table { border-collapse: collapse; font-size: 12px; }
+.matrix-table th, .matrix-table td {
+  padding: 7px 10px; text-align: center;
+  border: 1px solid var(--border);
+  font-family: 'DM Mono', monospace;
+  white-space: nowrap;
+}
+.matrix-table th {
+  background: var(--surface-2); font-size: 11px;
+  font-weight: 500; color: var(--text-muted);
+  letter-spacing: 0.03em;
+}
+.matrix-table th.row-header { text-align: left; padding-left: 12px; }
+.matrix-table td.row-header {
+  text-align: left; padding-left: 12px;
+  font-weight: 600; color: var(--text);
+  background: var(--surface-2);
+  font-family: 'DM Sans', sans-serif; font-size: 12px;
+}
+.matrix-cell-win  { color: var(--green); font-weight: 600; }
+.matrix-cell-loss { color: var(--red); }
+.matrix-cell-even { color: var(--text-muted); }
+.matrix-cell-self { background: var(--border); color: transparent; }
+
+/* ── Section headers ── */
+.history-section { margin-bottom: 1.5rem; }
+.history-section-title {
+  font-size: 15px; font-weight: 600; letter-spacing: -0.01em;
+  margin-bottom: 1rem; padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+}
+
+/* ── Progress ── */
+.history-progress {
+  background: var(--surface-2); border: 1px solid var(--border);
+  border-radius: var(--radius-md); padding: 1.25rem;
+  margin-bottom: 1.25rem; display: none;
+}
+.history-progress-label { font-size: 13px; color: var(--text-muted); margin-bottom: 8px; }
+.history-progress-track {
+  height: 6px; background: var(--border);
+  border-radius: 99px; overflow: hidden;
+}
+.history-progress-fill {
+  height: 100%; background: var(--green);
+  border-radius: 99px; transition: width 0.3s ease; width: 0%;
+}
