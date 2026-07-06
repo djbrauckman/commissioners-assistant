@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Keepers — Commissioner Assistant</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/styles.css" />
+  <link rel="stylesheet" href="css/stats.css" />
+</head>
+<body>
+<div class="container stats-container">
+
+  <header class="app-header">
+    <h1>Commissioner Assistant</h1>
+    <p>Division randomizer · Schedule generator · Rivalry week</p>
+  </header>
+
+  <!-- Navigation -->
+  <nav id="main-nav" style="display:flex; gap:6px; margin-bottom:2rem;"></nav>
+
+  <!-- Load form -->
+  <div class="card">
+    <div class="step-header">
+      <div class="step-badge">1</div>
+      <span class="step-title">Load league keepers</span>
+    </div>
+    <div class="load-form">
+      <div>
+        <div class="label">Sleeper league ID</div>
+        <input type="text" id="keepersLeagueId" placeholder="e.g. 1367188507650428928" />
+      </div>
+      <div>
+        <div class="label">Only season (optional)</div>
+        <input type="number" id="keepersSeason" placeholder="leave blank for all years" />
+      </div>
+      <button class="btn-primary" onclick="handleLoadKeepers()">Load →</button>
+    </div>
+    <div id="loadError" class="warn" style="display:none"></div>
+  </div>
+
+  <!-- Progress -->
+  <div class="progress-wrap" id="progressWrap">
+    <div class="progress-label" id="progressLabel">Loading...</div>
+    <div class="progress-bar-track">
+      <div class="progress-bar-fill" id="progressFill"></div>
+    </div>
+  </div>
+
+  <!-- Results -->
+  <div id="keepersResults" style="display:none">
+    <div class="section-header" style="margin-bottom:1rem">
+      <div>
+        <div class="section-title" id="resultsTitle"></div>
+        <div class="section-meta" id="resultsMeta"></div>
+      </div>
+      <button class="btn-secondary" onclick="exportKeepersCSV()">↓ Export CSV</button>
+    </div>
+
+    <div class="manager-grid" id="keepersGrid"></div>
+  </div>
+
+</div>
+
+<script src="js/nav.js"></script>
+<script src="js/keepers.js"></script>
+</body>
+</html>
