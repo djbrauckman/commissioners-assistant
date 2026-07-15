@@ -70,16 +70,51 @@ async function walkLeagueChain(leagueId) {
   return chain;
 }
 
+// Cache of draftId -> full picks array, so a season's draft only ever
+// gets fetched once even when it's referenced both for its own keepers
+// and as the "previous season" lookback for a later season's projection.
+const draftPicksCache = {};
+
+async function fetchAllDraftPicks(draftId) {
+  if (!draftId) return null;
+  if (draftPicksCache[draftId] !== undefined) return draftPicksCache[draftId];
+  const picks = await apiFetch(`${SLEEPER}/draft/${draftId}/picks`).catch(() => []);
+  draftPicksCache[draftId] = picks;
+  return picks;
+}
+
 /**
  * Fetch keeper picks (is_keeper: true) from a season's draft.
  * Returns null if the draft hasn't happened yet (no picks made) so the
  * caller can fall back to the roster-level "keepers" array instead.
  */
 async function fetchDraftKeeperPicks(draftId) {
-  if (!draftId) return null;
-  const picks = await apiFetch(`${SLEEPER}/draft/${draftId}/picks`).catch(() => []);
-  if (picks.length === 0) return null;
+  const picks = await fetchAllDraftPicks(draftId);
+  if (!picks || picks.length === 0) return null;
   return picks.filter(p => p.is_keeper);
+}
+
+/**
+ * League keeper rule: a player is kept at the round they were drafted
+ * (free agents / round-10-or-later picks count as round 10) the first
+ * year they're kept, then that round value climbs 3 rounds every year
+ * after — e.g. a round-10 FA pickup is an round 10 keeper the first
+ * year, a round 7 keeper the next, round 4 the year after that, etc.
+ *
+ * Since each season's recorded pick round already bakes in the prior
+ * history, projecting next year's cost only requires looking at the
+ * player's most recent draft pick:
+ *  - not drafted last season (true free agent) → base round 10
+ *  - drafted last season but NOT as a keeper → this is their first
+ *    kept year, so the value is just last year's round (clamped to 10)
+ *  - kept last season already → subtract 3 more, floor at round 1
+ */
+function projectKeeperRound(playerId, prevPickMap) {
+  if (!prevPickMap) return null;
+  const prev = prevPickMap[playerId];
+  if (!prev) return 10;
+  const baseRound = Math.min(prev.round, 10);
+  return prev.isKeeper ? Math.max(1, baseRound - 3) : baseRound;
 }
 
 function describePlayerId(playerId, playersDb) {
@@ -119,9 +154,10 @@ async function handleLoadKeepers() {
   try {
     localStorage.setItem('lastLeagueId', leagueId);
 
-    let chain = await walkLeagueChain(leagueId);
+    const fullChain = await walkLeagueChain(leagueId);
+    let chain = fullChain;
     if (season) {
-      chain = chain.filter(link => String(link.season) === String(season));
+      chain = fullChain.filter(link => String(link.season) === String(season));
       if (chain.length === 0) throw new Error(`Season ${season} not found in this league's history.`);
     }
 
@@ -157,11 +193,25 @@ async function handleLoadKeepers() {
           keepers: (byRoster[r.roster_id] || []).sort((a, b) => a.round - b.round),
         }));
       } else {
-        // Draft hasn't happened yet — use the roster's declared keepers.
+        // Draft hasn't happened yet — use the roster's declared keepers,
+        // projecting the round each would cost from last season's draft.
+        const prevLink = fullChain[fullChain.findIndex(l => l.leagueId === link.leagueId) + 1];
+        const prevPicks = prevLink ? await fetchAllDraftPicks(prevLink.draftId) : null;
+        let prevPickMap = null;
+        if (prevPicks && prevPicks.length) {
+          prevPickMap = {};
+          prevPicks.forEach(p => { prevPickMap[p.player_id] = { round: p.round, isKeeper: !!p.is_keeper }; });
+        }
+
         teams = rosters.map(r => ({
           rosterId: r.roster_id,
           teamName: nameMap[r.owner_id] || `Team ${r.roster_id}`,
-          keepers: (r.keepers || []).map(pid => describePlayerId(pid, playersDb)),
+          keepers: (r.keepers || []).map(pid => {
+            const desc = describePlayerId(pid, playersDb);
+            desc.round = projectKeeperRound(pid, prevPickMap);
+            desc.projected = desc.round != null;
+            return desc;
+          }).sort((a, b) => (a.round ?? Infinity) - (b.round ?? Infinity)),
         }));
       }
       teams.sort((a, b) => a.teamName.localeCompare(b.teamName));
@@ -230,7 +280,7 @@ function renderKeepers(data) {
           <table>
             <thead><tr><th>Player</th><th>Pos</th><th>Team</th><th>Kept at</th></tr></thead>
             <tbody>
-              ${team.keepers.map(k => `<tr><td>${k.name}</td><td>${k.position}</td><td>${k.team}</td><td>${k.round != null ? `Rd ${k.round} · Pick ${k.pickNo}` : '—'}</td></tr>`).join('')}
+              ${team.keepers.map(k => `<tr><td>${k.name}</td><td>${k.position}</td><td>${k.team}</td><td>${k.round == null ? '—' : k.pickNo != null ? `Rd ${k.round} · Pick ${k.pickNo}` : `Rd ${k.round} (proj.)`}</td></tr>`).join('')}
             </tbody>
           </table>
         ` : '<div style="font-size:13px;color:var(--text-faint);padding:8px 0">No keepers selected</div>'}
