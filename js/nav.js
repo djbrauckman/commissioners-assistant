@@ -10,6 +10,7 @@ const NAV_LINKS = [
   { key: 'dues',     label: 'Dues',     href: 'dues.html' },
   { key: 'history',  label: 'History',  href: 'history.html' },
   { key: 'keepers',  label: 'Keepers',  href: 'keepers.html' },
+  { key: 'draft-research', label: 'Draft Research', href: 'draft-research.html' },
 ];
 
 function initNav(activePage) {

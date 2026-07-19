@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Draft Research — Commissioner Assistant</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/styles.css" />
+  <link rel="stylesheet" href="css/stats.css" />
+  <style>
+    .gate-overlay {
+      position: fixed; inset: 0; z-index: 9999;
+      background: var(--bg);
+      display: flex; align-items: center; justify-content: center;
+    }
+    .gate-box {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); box-shadow: var(--shadow-md);
+      padding: 28px; width: 260px; text-align: center;
+    }
+    .gate-box input { width: 100%; margin-bottom: 10px; }
+    .gate-box .btn-primary { width: 100%; }
+  </style>
+</head>
+<body>
+
+<!-- Casual deterrent only — not real security. See js/gate.js. -->
+<div class="gate-overlay" id="gateOverlay">
+  <div class="gate-box">
+    <input type="password" id="gatePassword" placeholder="Password" autocomplete="off" />
+    <button class="btn-primary" onclick="checkGatePassword()">Unlock</button>
+    <div id="gateError" class="warn" style="display:none">Nope.</div>
+  </div>
+</div>
+
+<div class="container stats-container" id="pageContent" style="display:none">
+
+  <header class="app-header">
+    <h1>Commissioner Assistant</h1>
+    <p>Division randomizer · Schedule generator · Rivalry week</p>
+  </header>
+
+  <!-- Navigation -->
+  <nav id="main-nav" style="display:flex; gap:6px; margin-bottom:2rem;"></nav>
+
+  <!-- Load form -->
+  <div class="card">
+    <div class="step-header">
+      <div class="step-badge">1</div>
+      <span class="step-title">Load league data</span>
+    </div>
+    <div class="load-form" style="grid-template-columns:1fr auto">
+      <div>
+        <div class="label">Sleeper league ID (current season)</div>
+        <input type="text" id="drLeagueId" placeholder="e.g. 1367188507650428928" />
+      </div>
+      <button class="btn-primary" onclick="handleLoadDraftResearch()">Load →</button>
+    </div>
+    <div id="loadError" class="warn" style="display:none"></div>
+  </div>
+
+  <!-- Progress -->
+  <div class="progress-wrap" id="progressWrap">
+    <div class="progress-label" id="progressLabel">Loading...</div>
+    <div class="progress-bar-track">
+      <div class="progress-bar-fill" id="progressFill"></div>
+    </div>
+  </div>
+
+  <!-- Results -->
+  <div id="drResults" style="display:none">
+
+    <div class="section-header" style="margin-bottom:1rem">
+      <div>
+        <div class="section-title" id="resultsTitle"></div>
+        <div class="section-meta" id="resultsMeta"></div>
+      </div>
+    </div>
+
+    <!-- ── VORP ── -->
+    <div class="card" style="margin-bottom:1.5rem">
+      <div class="step-header">
+        <div class="step-badge">A</div>
+        <span class="step-title">VORP — value over replacement</span>
+      </div>
+      <div class="section-meta" style="margin-bottom:12px">
+        Ranks players by last completed season's actual half-PPR points minus the "replacement level" for their
+        position — the best player at that position who wouldn't have been a starter anywhere in your league,
+        given your exact roster construction (including how the two flex slots typically get filled).
+      </div>
+
+      <div class="stat-bar" id="replacementChips"></div>
+
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;align-items:center">
+        <div id="posFilterBar" style="display:flex;gap:6px;flex-wrap:wrap"></div>
+        <input type="text" id="playerSearch" placeholder="Search player..." oninput="renderVorpTable()" style="max-width:200px;margin-left:auto" />
+        <button class="btn-secondary" onclick="exportVORPCSV()">↓ Export CSV</button>
+      </div>
+
+      <div class="weekly-table-wrap">
+        <table>
+          <thead><tr><th>Rank</th><th>Player</th><th>Pos</th><th>Team</th><th>Pts</th><th>Replacement</th><th>VORP</th></tr></thead>
+          <tbody id="vorpTbody"></tbody>
+        </table>
+      </div>
+      <div class="progress-label" id="vorpCount" style="margin-top:8px"></div>
+    </div>
+
+    <!-- ── QB Scoring Premium ── -->
+    <div class="card" style="margin-bottom:1.5rem">
+      <div class="step-header">
+        <div class="step-badge">B</div>
+        <span class="step-title">QB scoring premium</span>
+      </div>
+      <div class="section-meta" id="qbScoringMeta" style="margin-bottom:12px"></div>
+
+      <div class="weekly-table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Rank</th><th>QB</th><th>Team</th><th>Pass Yd</th><th>Pass TD</th>
+              <th>League Pts</th><th>Standard Pts</th><th>Δ Pts</th><th>Rank Shift</th>
+            </tr>
+          </thead>
+          <tbody id="qbScoringTbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ── Keeper Value ── -->
+    <div class="card">
+      <div class="step-header">
+        <div class="step-badge">C</div>
+        <span class="step-title">Keeper value vs ADP</span>
+      </div>
+      <div class="section-meta" style="margin-bottom:12px">
+        Paste FantasyPros ADP export below (CSV, needs a Player column and an ADP/AVG column) to compare each
+        keeper's cost against market draft position. VORP rank from Section A is shown alongside as a second,
+        production-based value signal.
+      </div>
+
+      <div style="margin-bottom:12px">
+        <textarea id="adpInput" rows="4" placeholder="Paste FantasyPros ADP CSV here (Rank,Player,Team,Bye,POS,...,AVG)" style="width:100%;font-family:'DM Mono',monospace;font-size:12px;padding:10px;border-radius:var(--radius-md);border:1px solid var(--border);background:var(--surface-2);color:var(--text);resize:vertical"></textarea>
+        <div style="display:flex;gap:8px;margin-top:8px;align-items:center">
+          <button class="btn-primary" onclick="handleApplyADP()">Apply ADP →</button>
+          <div class="progress-label" id="adpStatus" style="margin:0"></div>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;align-items:center">
+        <div>
+          <div class="label" style="margin-bottom:4px">Team</div>
+          <select id="keeperTeamFilter" onchange="renderKeeperValue()"><option value="ALL">All teams</option></select>
+        </div>
+        <button class="btn-secondary" onclick="exportKeeperValueCSV()" style="margin-left:auto;align-self:flex-end">↓ Export CSV</button>
+      </div>
+
+      <div class="weekly-table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Team</th><th>Player</th><th>Pos</th><th>Kept At</th>
+              <th>ADP</th><th>ADP Rd</th><th>Value Δ</th><th>VORP</th><th>VORP Rank</th>
+            </tr>
+          </thead>
+          <tbody id="keeperValueTbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+
+</div>
+
+<script src="js/gate.js"></script>
+<script src="js/nav.js"></script>
+<script src="js/draft-research.js"></script>
+</body>
+</html>
