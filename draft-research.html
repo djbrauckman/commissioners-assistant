@@ -86,10 +86,13 @@
         <span class="step-title">VORP — value over replacement</span>
       </div>
       <div class="section-meta" style="margin-bottom:12px">
-        Ranks players by last completed season's actual half-PPR points minus the "replacement level" for their
-        position — the best player at that position who wouldn't have been a starter anywhere in your league,
-        given your exact roster construction (including how the two flex slots typically get filled).
+        Ranks players by half-PPR points minus the "replacement level" for their position — the best player at that
+        position who wouldn't have been a starter anywhere in your league, given your exact roster construction
+        (including how the two flex slots typically get filled). Toggle between last season's actuals and this
+        season's projections (Sleeper's own weekly projections, summed) as the points source.
       </div>
+
+      <div id="vorpSourceBar" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px"></div>
 
       <div class="stat-bar" id="replacementChips"></div>
 
@@ -153,6 +156,10 @@
         <div>
           <div class="label" style="margin-bottom:4px">Team</div>
           <select id="keeperTeamFilter" onchange="renderKeeperValue()"><option value="ALL">All teams</option></select>
+        </div>
+        <div>
+          <div class="label" style="margin-bottom:4px">VORP source</div>
+          <div id="keeperVorpSourceBar" style="display:flex;gap:6px"></div>
         </div>
         <button class="btn-secondary" onclick="exportKeeperValueCSV()" style="margin-left:auto;align-self:flex-end">↓ Export CSV</button>
       </div>

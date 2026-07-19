@@ -30,7 +30,9 @@ const STANDARD_PASS_TD = 4;
 
 let currentData   = null;
 let lastPlayersDb = null;
-let activePosFilter = 'ALL';
+let activePosFilter  = 'ALL';
+let activeVorpSource  = 'actual';    // 'actual' | 'projected' — drives the VORP table
+let keeperVorpSource  = 'actual';    // 'actual' | 'projected' — drives the keeper-value columns
 
 document.addEventListener('DOMContentLoaded', () => {
   initNav('draft-research');
@@ -247,7 +249,7 @@ function computeQBScoringPremium(qbPassTotals, playerTotals, playersDb, scoringS
 
 // ─── Keeper value ────────────────────────────────────────────────────────────
 
-async function computeKeeperValue(currentLink, priorLink, currentRosters, nameMap, playersDb, vorp) {
+async function computeKeeperValue(currentLink, priorLink, currentRosters, nameMap, playersDb, vorpBySource) {
   let prevPickMap = null;
   if (priorLink) {
     const prevPicks = await fetchAllDraftPicks(priorLink.draftId);
@@ -279,7 +281,10 @@ async function computeKeeperValue(currentLink, priorLink, currentRosters, nameMa
   const teams = currentRosters.map(r => {
     const teamName = nameMap[r.owner_id] || `Team ${r.roster_id}`;
     const keepers = (byRosterKeepers[r.roster_id] || []).map(k => {
-      const v = vorp.byId[k.id];
+      const pick = source => {
+        const v = vorpBySource[source].byId[k.id];
+        return v ? { points: v.points, vorp: v.vorp, overallRank: v.overallRank, posRank: v.posRank } : null;
+      };
       return {
         id: k.id,
         name: playerName(k.id, playersDb),
@@ -287,10 +292,7 @@ async function computeKeeperValue(currentLink, priorLink, currentRosters, nameMa
         team: playersDb[k.id]?.team || 'FA',
         round: k.round,
         projected: k.projected,
-        vorpPts: v ? v.points : null,
-        vorp: v ? v.vorp : null,
-        overallRank: v ? v.overallRank : null,
-        posRank: v ? v.posRank : null,
+        vorpBySource: { actual: pick('actual'), projected: pick('projected') },
       };
     });
     return { rosterId: r.roster_id, teamName, keepers };
@@ -410,12 +412,12 @@ async function handleLoadDraftResearch() {
     currentUsers.forEach(u => { nameMap[u.user_id] = u.display_name; });
     const numTeams = currentRosters.length;
 
-    // ── Weekly stats sweep — feeds both VORP totals and QB scoring premium ──
+    // ── Weekly stats sweep — feeds actuals-based VORP totals and QB scoring premium ──
     const playerTotals = {};
     const qbPassTotals = {};
     for (let week = 1; week <= 17; week++) {
-      const pct = 15 + Math.round((week / 17) * 55);
-      showProgress(pct, `Loading ${vorpLink.season} week ${week}...`);
+      const pct = 15 + Math.round((week / 17) * 35);
+      showProgress(pct, `Loading ${vorpLink.season} actuals — week ${week}...`);
       let stats;
       try { stats = await apiFetch(`${SLEEPER}/stats/nfl/regular/${vorpLink.season}/${week}`); }
       catch (e) { continue; }
@@ -430,21 +432,41 @@ async function handleLoadDraftResearch() {
       });
     }
 
-    showProgress(72, 'Computing VORP...');
-    const vorp = computeVORP(playerTotals, playersDb, numTeams, vorpLink.rosterPositions);
+    // ── Weekly projections sweep — feeds projection-based VORP for the upcoming season ──
+    const projectionTotals = {};
+    for (let week = 1; week <= 17; week++) {
+      const pct = 50 + Math.round((week / 17) * 30);
+      showProgress(pct, `Loading ${currentLink.season} projections — week ${week}...`);
+      let proj;
+      try { proj = await apiFetch(`${SLEEPER}/projections/nfl/regular/${currentLink.season}/${week}`); }
+      catch (e) { continue; }
+      Object.entries(proj).forEach(([pid, s]) => {
+        const pts = s?.pts_half_ppr;
+        if (typeof pts === 'number') projectionTotals[pid] = (projectionTotals[pid] || 0) + pts;
+      });
+    }
 
-    showProgress(80, 'Computing QB scoring premium...');
+    showProgress(85, 'Computing VORP...');
+    const vorpBySource = {
+      actual:    computeVORP(playerTotals, playersDb, numTeams, vorpLink.rosterPositions),
+      projected: computeVORP(projectionTotals, playersDb, numTeams, currentLink.rosterPositions),
+    };
+    const hasProjections = Object.keys(projectionTotals).length > 0;
+
+    showProgress(90, 'Computing QB scoring premium...');
     const qbScoring = computeQBScoringPremium(qbPassTotals, playerTotals, playersDb, vorpLink.scoringSettings);
 
-    showProgress(90, 'Loading keeper data...');
-    const keeperValue = await computeKeeperValue(currentLink, priorLink, currentRosters, nameMap, playersDb, vorp);
+    showProgress(94, 'Loading keeper data...');
+    const keeperValue = await computeKeeperValue(currentLink, priorLink, currentRosters, nameMap, playersDb, vorpBySource);
 
     currentData = {
       leagueName: currentLink.name,
       vorpSeason: vorpLink.season,
+      projectionSeason: currentLink.season,
       currentSeason: currentLink.season,
       numTeams,
-      vorp,
+      vorpBySource,
+      hasProjections,
       qbScoring,
       keeperValue,
       adpMap: currentData?.adpMap, // preserve if user pasted ADP before reloading
@@ -480,12 +502,15 @@ function hideProgress() {
 function renderAll(data) {
   document.getElementById('resultsTitle').textContent = data.leagueName;
   document.getElementById('resultsMeta').textContent =
-    `VORP + QB scoring based on ${data.vorpSeason} actuals · keepers from ${data.currentSeason} · ${data.numTeams} teams`;
+    `VORP: ${data.vorpSeason} actuals or ${data.projectionSeason} projections · QB scoring based on ${data.vorpSeason} actuals · `
+    + `keepers from ${data.currentSeason} · ${data.numTeams} teams`;
 
-  renderReplacementChips(data);
+  renderVorpSourceBar(data);
+  renderReplacementChips();
   renderVorpTable();
   renderQBScoring(data);
   renderKeeperTeamFilter(data);
+  renderKeeperVorpSourceBar();
   renderKeeperValue();
 
   document.getElementById('drResults').style.display = 'block';
@@ -493,12 +518,30 @@ function renderAll(data) {
 
 // ─── Render: VORP ───────────────────────────────────────────────────────────────
 
-function renderReplacementChips(data) {
+function renderVorpSourceBar(data) {
+  const bar = document.getElementById('vorpSourceBar');
+  const projLabel = data.hasProjections ? `${data.projectionSeason} projections` : `${data.projectionSeason} projections (unavailable)`;
+  bar.innerHTML = `
+    <button class="btn-secondary vorp-source-btn ${activeVorpSource === 'actual' ? 'tab-active' : ''}" data-source="actual" onclick="setVorpSource('actual')">${data.vorpSeason} actuals</button>
+    <button class="btn-secondary vorp-source-btn ${activeVorpSource === 'projected' ? 'tab-active' : ''}" data-source="projected" onclick="setVorpSource('projected')" ${data.hasProjections ? '' : 'disabled title="Sleeper has no projection data for this season yet"'}>${projLabel}</button>
+  `;
+}
+
+function setVorpSource(source) {
+  activeVorpSource = source;
+  document.querySelectorAll('.vorp-source-btn').forEach(b => b.classList.toggle('tab-active', b.dataset.source === source));
+  renderReplacementChips();
+  renderVorpTable();
+}
+
+function renderReplacementChips() {
+  if (!currentData) return;
+  const vorp = currentData.vorpBySource[activeVorpSource];
   const el = document.getElementById('replacementChips');
   el.innerHTML = BASE_POS.map(pos => `
     <div class="stat-chip">
-      <span>${data.vorp.replacement[pos].toFixed(1)}</span>
-      ${pos} replacement · ${data.vorp.startableCounts[pos]} startable
+      <span>${vorp.replacement[pos].toFixed(1)}</span>
+      ${pos} replacement · ${vorp.startableCounts[pos]} startable
     </div>
   `).join('');
 }
@@ -511,8 +554,9 @@ function setPosFilter(pos) {
 
 function renderVorpTable() {
   if (!currentData) return;
+  const vorp = currentData.vorpBySource[activeVorpSource];
   const search = document.getElementById('playerSearch').value.trim().toLowerCase();
-  let rows = currentData.vorp.players.filter(p =>
+  let rows = vorp.players.filter(p =>
     (activePosFilter === 'ALL' || p.pos === activePosFilter) &&
     (!search || p.name.toLowerCase().includes(search))
   );
@@ -530,18 +574,20 @@ function renderVorpTable() {
       <td style="color:${p.vorp >= 0 ? 'var(--green)' : 'var(--red)'};font-weight:600">${p.vorp >= 0 ? '+' : ''}${p.vorp.toFixed(1)}</td>
     </tr>
   `).join('');
-  document.getElementById('vorpCount').textContent = `Showing ${rows.length} of ${total}`;
+  document.getElementById('vorpCount').textContent = `Showing ${rows.length} of ${total} (${activeVorpSource === 'actual' ? currentData.vorpSeason + ' actuals' : currentData.projectionSeason + ' projections'})`;
 }
 
 function exportVORPCSV() {
   if (!currentData) return;
+  const vorp = currentData.vorpBySource[activeVorpSource];
   let csv = 'Rank,Player,Pos,Team,Points,Replacement,VORP\n';
-  currentData.vorp.players.forEach(p => {
+  vorp.players.forEach(p => {
     csv += `${p.overallRank},${p.name},${p.pos},${p.team},${p.points},${p.replacement},${p.vorp}\n`;
   });
+  const label = activeVorpSource === 'actual' ? `${currentData.vorpSeason}_actual` : `${currentData.projectionSeason}_projected`;
   const a = document.createElement('a');
   a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
-  a.download = `${currentData.vorpSeason}_vorp.csv`;
+  a.download = `${label}_vorp.csv`;
   a.click();
 }
 
@@ -576,6 +622,22 @@ function renderKeeperTeamFilter(data) {
     data.keeperValue.teams.map(t => `<option value="${t.rosterId}">${t.teamName}</option>`).join('');
 }
 
+function renderKeeperVorpSourceBar() {
+  if (!currentData) return;
+  const bar = document.getElementById('keeperVorpSourceBar');
+  const data = currentData;
+  bar.innerHTML = `
+    <button class="btn-secondary keeper-vorp-source-btn ${keeperVorpSource === 'actual' ? 'tab-active' : ''}" data-source="actual" onclick="setKeeperVorpSource('actual')">${data.vorpSeason} actuals</button>
+    <button class="btn-secondary keeper-vorp-source-btn ${keeperVorpSource === 'projected' ? 'tab-active' : ''}" data-source="projected" onclick="setKeeperVorpSource('projected')" ${data.hasProjections ? '' : 'disabled'}>${data.projectionSeason} projections</button>
+  `;
+}
+
+function setKeeperVorpSource(source) {
+  keeperVorpSource = source;
+  document.querySelectorAll('.keeper-vorp-source-btn').forEach(b => b.classList.toggle('tab-active', b.dataset.source === source));
+  renderKeeperValue();
+}
+
 function renderKeeperValue() {
   if (!currentData) return;
   const filter = document.getElementById('keeperTeamFilter').value;
@@ -586,10 +648,15 @@ function renderKeeperValue() {
   currentData.keeperValue.teams.forEach(team => {
     if (filter !== 'ALL' && String(team.rosterId) !== filter) return;
     team.keepers.forEach(k => {
+      const v = k.vorpBySource[keeperVorpSource];
       const adp = adpMap[k.id] ?? null;
       const adpRound = adp != null ? Math.max(1, Math.ceil(adp / numTeams)) : null;
       const valueDelta = (adpRound != null && k.round != null) ? adpRound - k.round : null;
-      rows.push({ teamName: team.teamName, ...k, adp, adpRound, valueDelta });
+      rows.push({
+        teamName: team.teamName, id: k.id, name: k.name, pos: k.pos, round: k.round, projected: k.projected,
+        adp, adpRound, valueDelta,
+        vorp: v ? v.vorp : null, overallRank: v ? v.overallRank : null, posRank: v ? v.posRank : null,
+      });
     });
   });
 
@@ -620,13 +687,14 @@ function exportKeeperValueCSV() {
   if (!currentData) return;
   const adpMap = currentData.adpMap || {};
   const numTeams = currentData.numTeams;
-  let csv = 'Team,Player,Pos,Kept At,ADP,ADP Round,Value Delta,VORP,VORP Rank\n';
+  let csv = `Team,Player,Pos,Kept At,ADP,ADP Round,Value Delta,VORP (${keeperVorpSource}),VORP Rank\n`;
   currentData.keeperValue.teams.forEach(team => {
     team.keepers.forEach(k => {
+      const v = k.vorpBySource[keeperVorpSource];
       const adp = adpMap[k.id] ?? null;
       const adpRound = adp != null ? Math.max(1, Math.ceil(adp / numTeams)) : null;
       const valueDelta = (adpRound != null && k.round != null) ? adpRound - k.round : '';
-      csv += `${team.teamName},${k.name},${k.pos},${k.round ?? ''},${adp ?? ''},${adpRound ?? ''},${valueDelta},${k.vorp ?? ''},${k.overallRank ?? ''}\n`;
+      csv += `${team.teamName},${k.name},${k.pos},${k.round ?? ''},${adp ?? ''},${adpRound ?? ''},${valueDelta},${v ? v.vorp : ''},${v ? v.overallRank : ''}\n`;
     });
   });
   const a = document.createElement('a');
