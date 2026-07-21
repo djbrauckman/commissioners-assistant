@@ -139,9 +139,9 @@
         <span class="step-title">Keeper value vs ADP</span>
       </div>
       <div class="section-meta" style="margin-bottom:12px">
-        Paste FantasyPros ADP export below (CSV, needs a Player column and an ADP/AVG column) to compare each
-        keeper's cost against market draft position. VORP rank from Section A is shown alongside as a second,
-        production-based value signal.
+        Pick your team below, then paste a FantasyPros ADP export (CSV, needs a Player column and an ADP/AVG column)
+        to compare each of your keepers' cost against market draft position. VORP rank from Section A is shown
+        alongside as a second, production-based value signal. Only your own roster is shown here.
       </div>
 
       <div style="margin-bottom:12px">
@@ -154,8 +154,8 @@
 
       <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;align-items:center">
         <div>
-          <div class="label" style="margin-bottom:4px">Team</div>
-          <select id="keeperTeamFilter" onchange="renderKeeperValue()"><option value="ALL">All teams</option></select>
+          <div class="label" style="margin-bottom:4px">Your team</div>
+          <select id="keeperTeamFilter" onchange="onKeeperTeamChange()"></select>
         </div>
         <div>
           <div class="label" style="margin-bottom:4px">VORP source</div>

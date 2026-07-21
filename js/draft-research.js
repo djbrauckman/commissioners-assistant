@@ -327,6 +327,19 @@ function splitCsvLine(line) {
   return out.map(s => s.trim());
 }
 
+/**
+ * FantasyPros' "Player" column often bundles team + bye into the same cell
+ * as the player copy/pasted from their table, e.g. "Jahmyr Gibbs   DET (6)"
+ * (name, 2+ spaces, team code, bye in parens) — or just a bare name for
+ * free agents with no current team, e.g. "Stefon Diggs". Strip both.
+ */
+function stripTeamAndBye(raw) {
+  let s = (raw || '').trim();
+  s = s.replace(/\s*\([^)]*\)\s*$/, '').trim();       // trailing "(Bye)"
+  s = s.replace(/\s{2,}[A-Za-z]{2,4}$/, '').trim();   // trailing "  TEAM"
+  return s.replace(/\s+/g, ' ').trim();
+}
+
 function parseADPCsv(text) {
   const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
   if (lines.length < 2) return [];
@@ -334,6 +347,7 @@ function parseADPCsv(text) {
   const header  = splitCsvLine(lines[0]).map(h => h.toLowerCase());
   let nameIdx = header.findIndex(h => h === 'player' || h === 'name' || h.includes('player'));
   let adpIdx  = header.findIndex(h => h === 'avg' || h === 'adp' || h.includes('adp') || h === 'overall');
+  const posIdx = header.findIndex(h => h === 'pos' || h === 'position');
   if (nameIdx === -1) nameIdx = 1;
   if (adpIdx === -1) adpIdx = header.length - 1;
 
@@ -341,11 +355,12 @@ function parseADPCsv(text) {
   for (let i = 1; i < lines.length; i++) {
     const cols = splitCsvLine(lines[i]);
     if (cols.length <= Math.max(nameIdx, adpIdx)) continue;
-    let rawName = cols[nameIdx];
+    const rawName = cols[nameIdx];
     const adp = parseFloat(cols[adpIdx]);
     if (!rawName || isNaN(adp)) continue;
-    rawName = rawName.replace(/\s*\([^)]*\)\s*$/, '');
-    rows.push({ name: rawName.trim(), adp });
+    const name = stripTeamAndBye(rawName);
+    const posMatch = posIdx !== -1 ? cols[posIdx].match(/^([A-Za-z]+)/) : null;
+    rows.push({ name, adp, pos: posMatch ? posMatch[1].toUpperCase() : null });
   }
   return rows;
 }
@@ -356,13 +371,23 @@ function matchADPToPlayers(adpRows, playersDb) {
     const pos = p.position || p.fantasy_positions?.[0];
     if (!BASE_POS.includes(pos)) return;
     const nm = normalizeName(p.full_name || `${p.first_name || ''} ${p.last_name || ''}`);
-    if (nm && !(nm in byName)) byName[nm] = pid;
+    if (!nm) return;
+    (byName[nm] = byName[nm] || []).push({ pid, pos, active: !!p.active });
   });
+
   const map = {};
   let matched = 0;
   adpRows.forEach(row => {
-    const pid = byName[normalizeName(row.name)];
-    if (pid) { map[pid] = row.adp; matched++; }
+    const candidates = byName[normalizeName(row.name)];
+    if (!candidates || candidates.length === 0) return;
+    // Prefer an active player whose position matches the ADP row's POS
+    // column, to avoid colliding with retired/inactive same-name players.
+    const pick = candidates.find(c => c.active && (!row.pos || c.pos === row.pos))
+              || candidates.find(c => c.active)
+              || candidates.find(c => !row.pos || c.pos === row.pos)
+              || candidates[0];
+    map[pick.pid] = row.adp;
+    matched++;
   });
   return { map, matched, total: adpRows.length };
 }
@@ -616,10 +641,23 @@ function renderQBScoring(data) {
 
 // ─── Render: Keeper value ───────────────────────────────────────────────────────
 
+const MY_TEAM_STORAGE_KEY = 'dr_my_team_name';
+
 function renderKeeperTeamFilter(data) {
   const sel = document.getElementById('keeperTeamFilter');
-  sel.innerHTML = '<option value="ALL">All teams</option>' +
-    data.keeperValue.teams.map(t => `<option value="${t.rosterId}">${t.teamName}</option>`).join('');
+  const teams = data.keeperValue.teams;
+  sel.innerHTML = teams.map(t => `<option value="${t.rosterId}">${t.teamName}</option>`).join('');
+
+  const savedName = localStorage.getItem(MY_TEAM_STORAGE_KEY);
+  const savedTeam = savedName && teams.find(t => t.teamName === savedName);
+  if (savedTeam) sel.value = savedTeam.rosterId;
+}
+
+function onKeeperTeamChange() {
+  const sel = document.getElementById('keeperTeamFilter');
+  const teamName = sel.options[sel.selectedIndex]?.textContent;
+  if (teamName) localStorage.setItem(MY_TEAM_STORAGE_KEY, teamName);
+  renderKeeperValue();
 }
 
 function renderKeeperVorpSourceBar() {
@@ -646,7 +684,7 @@ function renderKeeperValue() {
 
   let rows = [];
   currentData.keeperValue.teams.forEach(team => {
-    if (filter !== 'ALL' && String(team.rosterId) !== filter) return;
+    if (String(team.rosterId) !== filter) return;
     team.keepers.forEach(k => {
       const v = k.vorpBySource[keeperVorpSource];
       const adp = adpMap[k.id] ?? null;
@@ -685,10 +723,12 @@ function renderKeeperValue() {
 
 function exportKeeperValueCSV() {
   if (!currentData) return;
+  const filter = document.getElementById('keeperTeamFilter').value;
   const adpMap = currentData.adpMap || {};
   const numTeams = currentData.numTeams;
   let csv = `Team,Player,Pos,Kept At,ADP,ADP Round,Value Delta,VORP (${keeperVorpSource}),VORP Rank\n`;
   currentData.keeperValue.teams.forEach(team => {
+    if (String(team.rosterId) !== filter) return;
     team.keepers.forEach(k => {
       const v = k.vorpBySource[keeperVorpSource];
       const adp = adpMap[k.id] ?? null;
