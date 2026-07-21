@@ -262,40 +262,48 @@ async function computeKeeperValue(currentLink, priorLink, currentRosters, nameMa
   const keeperPicks = await fetchAllDraftPicks(currentLink.draftId).catch(() => null);
   const hasDraftHappened = !!(keeperPicks && keeperPicks.length > 0);
 
-  const byRosterKeepers = {};
+  // Which player_ids are actually declared/locked keepers per roster, and — if
+  // the draft already happened — the real round they were kept at (takes
+  // priority over our hypothetical projection for that specific player).
+  const declaredByRoster = {};
+  const actualRoundByRoster = {};
   if (hasDraftHappened) {
     keeperPicks.filter(p => p.is_keeper).forEach(p => {
-      if (!byRosterKeepers[p.roster_id]) byRosterKeepers[p.roster_id] = [];
-      byRosterKeepers[p.roster_id].push({ id: p.player_id, round: p.round, projected: false });
+      (declaredByRoster[p.roster_id] = declaredByRoster[p.roster_id] || new Set()).add(p.player_id);
+      (actualRoundByRoster[p.roster_id] = actualRoundByRoster[p.roster_id] || {})[p.player_id] = p.round;
     });
   } else {
     currentRosters.forEach(r => {
-      byRosterKeepers[r.roster_id] = (r.keepers || []).map(pid => ({
-        id: pid,
-        round: projectKeeperRound(pid, prevPickMap),
-        projected: true,
-      }));
+      declaredByRoster[r.roster_id] = new Set(r.keepers || []);
     });
   }
 
   const teams = currentRosters.map(r => {
     const teamName = nameMap[r.owner_id] || `Team ${r.roster_id}`;
-    const keepers = (byRosterKeepers[r.roster_id] || []).map(k => {
+    const declaredSet = declaredByRoster[r.roster_id] || new Set();
+    const actualRounds = actualRoundByRoster[r.roster_id] || {};
+
+    // Evaluate every rostered player, not just the ones already declared as
+    // keepers, so value can be judged before locking anyone in.
+    const players = (r.players || []).map(pid => {
+      const hasActualRound = actualRounds[pid] != null;
+      const round = hasActualRound ? actualRounds[pid] : projectKeeperRound(pid, prevPickMap);
       const pick = source => {
-        const v = vorpBySource[source].byId[k.id];
+        const v = vorpBySource[source].byId[pid];
         return v ? { points: v.points, vorp: v.vorp, overallRank: v.overallRank, posRank: v.posRank } : null;
       };
       return {
-        id: k.id,
-        name: playerName(k.id, playersDb),
-        pos: getPosition(k.id, playersDb),
-        team: playersDb[k.id]?.team || 'FA',
-        round: k.round,
-        projected: k.projected,
+        id: pid,
+        name: playerName(pid, playersDb),
+        pos: getPosition(pid, playersDb),
+        team: playersDb[pid]?.team || 'FA',
+        round,
+        isActualRound: hasActualRound,
+        isDeclaredKeeper: declaredSet.has(pid),
         vorpBySource: { actual: pick('actual'), projected: pick('projected') },
       };
     });
-    return { rosterId: r.roster_id, teamName, keepers };
+    return { rosterId: r.roster_id, teamName, players };
   });
   teams.sort((a, b) => a.teamName.localeCompare(b.teamName));
 
@@ -685,13 +693,14 @@ function renderKeeperValue() {
   let rows = [];
   currentData.keeperValue.teams.forEach(team => {
     if (String(team.rosterId) !== filter) return;
-    team.keepers.forEach(k => {
+    team.players.forEach(k => {
       const v = k.vorpBySource[keeperVorpSource];
       const adp = adpMap[k.id] ?? null;
       const adpRound = adp != null ? Math.max(1, Math.ceil(adp / numTeams)) : null;
       const valueDelta = (adpRound != null && k.round != null) ? adpRound - k.round : null;
       rows.push({
-        teamName: team.teamName, id: k.id, name: k.name, pos: k.pos, round: k.round, projected: k.projected,
+        teamName: team.teamName, id: k.id, name: k.name, pos: k.pos, round: k.round,
+        isActualRound: k.isActualRound, isDeclaredKeeper: k.isDeclaredKeeper,
         adp, adpRound, valueDelta,
         vorp: v ? v.vorp : null, overallRank: v ? v.overallRank : null, posRank: v ? v.posRank : null,
       });
@@ -707,11 +716,11 @@ function renderKeeperValue() {
   });
 
   document.getElementById('keeperValueTbody').innerHTML = rows.map(k => `
-    <tr>
-      <td>${k.teamName}</td>
+    <tr${k.isDeclaredKeeper ? ' style="background:var(--green-bg)"' : ''}>
+      <td>${k.isDeclaredKeeper ? '✓' : ''}</td>
       <td>${k.name}</td>
       <td><span class="pos-legend-dot" style="background:${POS_COLORS[k.pos] || '#999'};display:inline-block;margin-right:5px"></span>${k.pos}</td>
-      <td>${k.round != null ? `Rd ${k.round}${k.projected ? ' (proj.)' : ''}` : '—'}</td>
+      <td>${k.round != null ? `Rd ${k.round}${k.isActualRound ? '' : ' (proj.)'}` : '—'}</td>
       <td>${k.adp != null ? k.adp.toFixed(1) : '—'}</td>
       <td>${k.adpRound != null ? `Rd ${k.adpRound}` : '—'}</td>
       <td style="${k.valueDelta != null ? `color:${k.valueDelta > 0 ? 'var(--green)' : k.valueDelta < 0 ? 'var(--red)' : 'var(--text-muted)'};font-weight:600` : ''}">${k.valueDelta != null ? (k.valueDelta > 0 ? '+' : '') + k.valueDelta : '—'}</td>
@@ -726,15 +735,15 @@ function exportKeeperValueCSV() {
   const filter = document.getElementById('keeperTeamFilter').value;
   const adpMap = currentData.adpMap || {};
   const numTeams = currentData.numTeams;
-  let csv = `Team,Player,Pos,Kept At,ADP,ADP Round,Value Delta,VORP (${keeperVorpSource}),VORP Rank\n`;
+  let csv = `Keeper,Player,Pos,Round,ADP,ADP Round,Value Delta,VORP (${keeperVorpSource}),VORP Rank\n`;
   currentData.keeperValue.teams.forEach(team => {
     if (String(team.rosterId) !== filter) return;
-    team.keepers.forEach(k => {
+    team.players.forEach(k => {
       const v = k.vorpBySource[keeperVorpSource];
       const adp = adpMap[k.id] ?? null;
       const adpRound = adp != null ? Math.max(1, Math.ceil(adp / numTeams)) : null;
       const valueDelta = (adpRound != null && k.round != null) ? adpRound - k.round : '';
-      csv += `${team.teamName},${k.name},${k.pos},${k.round ?? ''},${adp ?? ''},${adpRound ?? ''},${valueDelta},${v ? v.vorp : ''},${v ? v.overallRank : ''}\n`;
+      csv += `${k.isDeclaredKeeper ? 'Y' : ''},${k.name},${k.pos},${k.round ?? ''},${adp ?? ''},${adpRound ?? ''},${valueDelta},${v ? v.vorp : ''},${v ? v.overallRank : ''}\n`;
     });
   });
   const a = document.createElement('a');
