@@ -178,6 +178,30 @@
       </div>
     </div>
 
+    <!-- ── Mock Draft Builds ── -->
+    <div class="card" style="margin-top:1.5rem">
+      <div class="step-header">
+        <div class="step-badge">D</div>
+        <span class="step-title">Mock draft builds</span>
+      </div>
+      <div class="section-meta" style="margin-bottom:12px">
+        Paste one or more Sleeper mock draft IDs (from the mock's URL, comma or newline separated) to pull your
+        roster from each and compare build strategies — round-by-round picks with VORP. Works best for solo mocks
+        (you vs bots); set "Your team" in Section C first so multi-human mocks can find your slot.
+      </div>
+
+      <div style="margin-bottom:12px">
+        <textarea id="mockIdsInput" rows="2" placeholder="Mock draft IDs, one per line or comma-separated" style="width:100%;font-family:'DM Mono',monospace;font-size:12px;padding:10px;border-radius:var(--radius-md);border:1px solid var(--border);background:var(--surface-2);color:var(--text);resize:vertical"></textarea>
+        <div style="display:flex;gap:8px;margin-top:8px;align-items:center;flex-wrap:wrap">
+          <button class="btn-primary" onclick="handleLoadMocks()">Load Mocks →</button>
+          <div id="mockVorpSourceBar" style="display:flex;gap:6px"></div>
+          <div class="progress-label" id="mockStatus" style="margin:0"></div>
+        </div>
+      </div>
+
+      <div class="manager-grid" id="mockGrid"></div>
+    </div>
+
   </div>
 
 </div>

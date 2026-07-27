@@ -1,13 +1,15 @@
 /**
  * draft-research.js
- * Three analyses for draft prep:
+ * Four analyses for draft prep:
  *  A. VORP — ranks players by last completed season's points minus
  *     replacement level, computed from this league's exact roster construction.
  *  B. QB scoring premium — how much extra value this league's passing
  *     scoring (vs a standard 1pt/25yd + 4pt/TD league) creates per QB.
- *  C. Keeper value — compares each team's keeper cost (the round they'd be
+ *  C. Keeper value — compares each roster's keeper cost (the round they'd be
  *     kept at, per the league's 3-round-escalation rule) against pasted-in
  *     FantasyPros ADP, with VORP shown alongside as a second value signal.
+ *  D. Mock draft builds — pulls your roster from one or more Sleeper mock
+ *     drafts to compare different build strategies (VORP per pick).
  *
  * Depends on: nav.js
  */
@@ -16,6 +18,8 @@ const SLEEPER = 'https://api.sleeper.app/v1';
 const PLAYERS_CACHE_KEY = 'sleeper_players_cache';
 const PLAYERS_CACHE_DATE_KEY = 'sleeper_players_cache_date';
 const ADP_STORAGE_KEY = 'draft_research_adp_csv';
+const MOCK_IDS_STORAGE_KEY = 'draft_research_mock_ids';
+const MY_TEAM_STORAGE_KEY = 'dr_my_team_name';
 
 const BASE_POS = ['QB', 'RB', 'WR', 'TE', 'K', 'DEF'];
 const POS_COLORS = { QB: '#E8614A', RB: '#3B82F6', WR: '#8B5CF6', TE: '#F59E0B', K: '#10B981', DEF: '#6B7280' };
@@ -33,6 +37,8 @@ let lastPlayersDb = null;
 let activePosFilter  = 'ALL';
 let activeVorpSource  = 'actual';    // 'actual' | 'projected' — drives the VORP table
 let keeperVorpSource  = 'actual';    // 'actual' | 'projected' — drives the keeper-value columns
+let mockVorpSource    = 'projected'; // 'actual' | 'projected' — drives the mock draft builds
+let currentMocks = [];
 
 document.addEventListener('DOMContentLoaded', () => {
   initNav('draft-research');
@@ -40,6 +46,8 @@ document.addEventListener('DOMContentLoaded', () => {
   if (saved) document.getElementById('drLeagueId').value = saved;
   const savedAdp = localStorage.getItem(ADP_STORAGE_KEY);
   if (savedAdp) document.getElementById('adpInput').value = savedAdp;
+  const savedMocks = localStorage.getItem(MOCK_IDS_STORAGE_KEY);
+  if (savedMocks) document.getElementById('mockIdsInput').value = savedMocks;
 
   const bar = document.getElementById('posFilterBar');
   bar.innerHTML = ['ALL', ...BASE_POS].map(pos => `
@@ -498,6 +506,7 @@ async function handleLoadDraftResearch() {
       projectionSeason: currentLink.season,
       currentSeason: currentLink.season,
       numTeams,
+      nameMap, // user_id -> display name, reused by the mock draft section to find "my" slot
       vorpBySource,
       hasProjections,
       qbScoring,
@@ -508,9 +517,11 @@ async function handleLoadDraftResearch() {
     hideProgress();
     renderAll(currentData);
 
-    // Re-apply any previously-pasted ADP text now that data is loaded.
+    // Re-apply any previously-pasted ADP text / mock IDs now that data is loaded.
     const adpText = document.getElementById('adpInput').value.trim();
     if (adpText) handleApplyADP();
+    const mockText = document.getElementById('mockIdsInput').value.trim();
+    if (mockText) handleLoadMocks();
   } catch (err) {
     hideProgress();
     errEl.textContent = `Error: ${err.message}`;
@@ -545,6 +556,7 @@ function renderAll(data) {
   renderKeeperTeamFilter(data);
   renderKeeperVorpSourceBar();
   renderKeeperValue();
+  renderMockVorpSourceBar();
 
   document.getElementById('drResults').style.display = 'block';
 }
@@ -649,8 +661,6 @@ function renderQBScoring(data) {
 
 // ─── Render: Keeper value ───────────────────────────────────────────────────────
 
-const MY_TEAM_STORAGE_KEY = 'dr_my_team_name';
-
 function renderKeeperTeamFilter(data) {
   const sel = document.getElementById('keeperTeamFilter');
   const teams = data.keeperValue.teams;
@@ -750,4 +760,154 @@ function exportKeeperValueCSV() {
   a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
   a.download = `${currentData.currentSeason}_keeper_value.csv`;
   a.click();
+}
+
+// ─── Mock draft builds ───────────────────────────────────────────────────────
+
+function parseMockIds(text) {
+  return text.split(/[\s,]+/).map(s => s.trim()).filter(Boolean);
+}
+
+/**
+ * Mock draft picks don't carry roster_id/picked_by the way real league
+ * drafts do (Sleeper leaves those blank for bot-filled mocks) — only
+ * draft_slot is populated. draft_order maps user_id -> slot for whichever
+ * human(s) joined the mock. We reuse the already-selected "my team" name
+ * (from the keeper section) to find the matching user_id; if the mock has
+ * exactly one human slot (the normal solo-vs-bots case) we just use that.
+ */
+function findMySlot(draft, nameMap) {
+  const entries = Object.entries(draft.draft_order || {}); // [userId, slot]
+  if (entries.length === 0) return { slot: null, entries };
+  const myTeamName = localStorage.getItem(MY_TEAM_STORAGE_KEY);
+  if (myTeamName && nameMap) {
+    const myUserId = Object.keys(nameMap).find(uid => nameMap[uid] === myTeamName);
+    const match = entries.find(([uid]) => uid === myUserId);
+    if (match) return { slot: match[1], entries, matchedByName: true };
+  }
+  if (entries.length === 1) return { slot: entries[0][1], entries };
+  return { slot: entries[0][1], entries, ambiguous: true };
+}
+
+async function handleLoadMocks() {
+  const text = document.getElementById('mockIdsInput').value;
+  localStorage.setItem(MOCK_IDS_STORAGE_KEY, text);
+  const statusEl = document.getElementById('mockStatus');
+  if (!currentData) { statusEl.textContent = 'Load league data first.'; return; }
+
+  const ids = parseMockIds(text);
+  if (ids.length === 0) { statusEl.textContent = 'Paste at least one mock draft ID.'; return; }
+  statusEl.textContent = 'Loading mocks...';
+
+  const mocks = [];
+  for (const draftId of ids) {
+    try {
+      const draft = await apiFetch(`${SLEEPER}/draft/${draftId}`);
+      const picks = await fetchAllDraftPicks(draftId);
+      const { slot, ambiguous } = findMySlot(draft, currentData.nameMap);
+
+      const myPicks = (picks || [])
+        .filter(p => p.draft_slot === slot)
+        .sort((a, b) => a.round - b.round)
+        .map(p => ({
+          round: p.round,
+          pickNo: p.pick_no,
+          id: p.player_id,
+          name: `${p.metadata?.first_name || ''} ${p.metadata?.last_name || ''}`.trim() || p.player_id,
+          pos: p.metadata?.position || getPosition(p.player_id, lastPlayersDb),
+          team: p.metadata?.team || 'FA',
+        }));
+
+      mocks.push({
+        draftId,
+        name: draft.metadata?.name || `Mock ${draftId}`,
+        slot,
+        ambiguous,
+        picks: myPicks,
+      });
+    } catch (err) {
+      mocks.push({ draftId, error: err.message });
+    }
+  }
+
+  currentMocks = mocks;
+  const ok = mocks.filter(m => !m.error).length;
+  statusEl.textContent = `Loaded ${ok} of ${ids.length} mock(s).`;
+  renderMockVorpSourceBar();
+  renderMocks();
+}
+
+function renderMockVorpSourceBar() {
+  const bar = document.getElementById('mockVorpSourceBar');
+  if (!bar || !currentData) return;
+  bar.innerHTML = `
+    <button class="btn-secondary mock-vorp-source-btn ${mockVorpSource === 'actual' ? 'tab-active' : ''}" data-source="actual" onclick="setMockVorpSource('actual')">${currentData.vorpSeason} actuals</button>
+    <button class="btn-secondary mock-vorp-source-btn ${mockVorpSource === 'projected' ? 'tab-active' : ''}" data-source="projected" onclick="setMockVorpSource('projected')" ${currentData.hasProjections ? '' : 'disabled'}>${currentData.projectionSeason} projections</button>
+  `;
+}
+
+function setMockVorpSource(source) {
+  mockVorpSource = source;
+  document.querySelectorAll('.mock-vorp-source-btn').forEach(b => b.classList.toggle('tab-active', b.dataset.source === source));
+  renderMocks();
+}
+
+function renderMocks() {
+  const grid = document.getElementById('mockGrid');
+  if (!grid) return;
+  grid.innerHTML = '';
+  if (!currentData) return;
+  const vorp = currentData.vorpBySource[mockVorpSource];
+
+  currentMocks.forEach(mock => {
+    const card = document.createElement('div');
+    card.className = 'manager-card';
+
+    if (mock.error) {
+      card.innerHTML = `
+        <div class="manager-card-header"><div class="manager-name">${mock.draftId}</div></div>
+        <div class="warn">Error: ${mock.error}</div>
+      `;
+      grid.appendChild(card);
+      return;
+    }
+
+    const posCounts = {};
+    let totalVorp = 0;
+    const rows = mock.picks.map(p => {
+      posCounts[p.pos] = (posCounts[p.pos] || 0) + 1;
+      const v = vorp.byId[p.id];
+      if (v) totalVorp += v.vorp;
+      return { ...p, vorp: v ? v.vorp : null };
+    });
+    const posSummary = BASE_POS.filter(pos => posCounts[pos]).map(pos => `${posCounts[pos]} ${pos}`).join(' · ');
+
+    card.innerHTML = `
+      <div class="manager-card-header">
+        <div class="manager-name">${mock.name}</div>
+        <div class="manager-record">${mock.picks.length} picks</div>
+      </div>
+      <div class="section-meta" style="margin-bottom:10px">
+        ${posSummary || 'No picks found for your slot'}
+        ${mock.picks.length ? ` · total VORP ${totalVorp >= 0 ? '+' : ''}${totalVorp.toFixed(1)}` : ''}
+        ${mock.ambiguous ? ' · <span style="color:var(--amber)">multiple human slots in this mock — guessed slot ' + mock.slot + ', set "Your team" above and reload if wrong</span>' : ''}
+      </div>
+      ${mock.picks.length ? `
+      <table>
+        <thead><tr><th>Rd</th><th>Player</th><th>Pos</th><th>Team</th><th>VORP</th></tr></thead>
+        <tbody>
+          ${rows.map(r => `
+            <tr>
+              <td>${r.round}</td>
+              <td>${r.name}</td>
+              <td><span class="pos-legend-dot" style="background:${POS_COLORS[r.pos] || '#999'};display:inline-block;margin-right:5px"></span>${r.pos}</td>
+              <td>${r.team}</td>
+              <td style="${r.vorp != null ? `color:${r.vorp >= 0 ? 'var(--green)' : 'var(--red)'}` : ''}">${r.vorp != null ? (r.vorp >= 0 ? '+' : '') + r.vorp.toFixed(1) : '—'}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>` : ''}
+    `;
+    grid.appendChild(card);
+  });
 }
