@@ -21,7 +21,11 @@ async function dbFetch(path, options = {}) {
       ...(options.headers || {}),
     },
   });
-  if (!res.ok) throw new Error(`API error ${res.status}: ${path}`);
+  if (!res.ok) {
+    let detail = '';
+    try { detail = (await res.json())?.error || ''; } catch (e) { /* body wasn't JSON */ }
+    throw new Error(`API error ${res.status}: ${path}${detail ? ` — ${detail}` : ''}`);
+  }
   return res.json();
 }
 

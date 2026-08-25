@@ -20,46 +20,51 @@ const { getSupabase, requireApiKey } = require('./_lib/supabase');
 
 module.exports = async (req, res) => {
   if (!requireApiKey(req, res)) return;
-  const supabase = getSupabase();
 
-  if (req.method === 'GET') {
-    const { league_ids, kind } = req.query;
-    if (!league_ids || !kind) {
-      res.status(400).json({ error: 'league_ids and kind are required' });
+  try {
+    const supabase = getSupabase();
+
+    if (req.method === 'GET') {
+      const { league_ids, kind } = req.query;
+      if (!league_ids || !kind) {
+        res.status(400).json({ error: 'league_ids and kind are required' });
+        return;
+      }
+      const ids = String(league_ids).split(',').map(s => s.trim()).filter(Boolean);
+      const { data, error } = await supabase
+        .from('season_cache')
+        .select('season, data')
+        .in('sleeper_league_id', ids)
+        .eq('kind', kind);
+
+      if (error) { res.status(500).json({ error: error.message }); return; }
+      const bySeason = {};
+      (data || []).forEach(row => { bySeason[row.season] = row.data; });
+      res.status(200).json(bySeason);
       return;
     }
-    const ids = String(league_ids).split(',').map(s => s.trim()).filter(Boolean);
-    const { data, error } = await supabase
-      .from('season_cache')
-      .select('season, data')
-      .in('sleeper_league_id', ids)
-      .eq('kind', kind);
 
-    if (error) { res.status(500).json({ error: error.message }); return; }
-    const bySeason = {};
-    (data || []).forEach(row => { bySeason[row.season] = row.data; });
-    res.status(200).json(bySeason);
-    return;
-  }
+    if (req.method === 'POST') {
+      const { league_id, season, kind, data } = req.body || {};
+      if (!league_id || !season || !kind || data === undefined) {
+        res.status(400).json({ error: 'league_id, season, kind, and data are required' });
+        return;
+      }
+      const { error } = await supabase.from('season_cache').upsert({
+        sleeper_league_id: league_id,
+        season: String(season),
+        kind,
+        data,
+        cached_at: new Date().toISOString(),
+      });
 
-  if (req.method === 'POST') {
-    const { league_id, season, kind, data } = req.body || {};
-    if (!league_id || !season || !kind || data === undefined) {
-      res.status(400).json({ error: 'league_id, season, kind, and data are required' });
+      if (error) { res.status(500).json({ error: error.message }); return; }
+      res.status(200).json({ ok: true });
       return;
     }
-    const { error } = await supabase.from('season_cache').upsert({
-      sleeper_league_id: league_id,
-      season: String(season),
-      kind,
-      data,
-      cached_at: new Date().toISOString(),
-    });
 
-    if (error) { res.status(500).json({ error: error.message }); return; }
-    res.status(200).json({ ok: true });
-    return;
+    res.status(405).json({ error: 'Method not allowed' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
-
-  res.status(405).json({ error: 'Method not allowed' });
 };
