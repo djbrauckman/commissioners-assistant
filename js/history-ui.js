@@ -6,10 +6,9 @@
 
 let historyData = null;
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
   initNav('history');
-  const saved = localStorage.getItem('lastLeagueId');
-  if (saved) document.getElementById('historyLeagueId').value = saved;
+  await prefillLeagueId('historyLeagueId');
 });
 
 // ─── Load ─────────────────────────────────────────────────────────────────────

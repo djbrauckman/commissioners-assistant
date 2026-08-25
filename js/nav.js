@@ -5,6 +5,7 @@
  */
 
 const NAV_LINKS = [
+  { key: 'league',   label: 'League',   href: 'league.html' },
   { key: 'schedule', label: 'Schedule', href: 'index.html' },
   { key: 'stats',    label: 'Stats',    href: 'stats.html' },
   { key: 'dues',     label: 'Dues',     href: 'dues.html' },

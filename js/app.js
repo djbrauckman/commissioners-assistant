@@ -12,10 +12,11 @@ let yearVal = new Date().getFullYear();
 
 // ─── Init ─────────────────────────────────────────────────────────────────────
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
   rebuildTeamInputs();
   document.getElementById('numTeams').addEventListener('change', rebuildTeamInputs);
   document.getElementById('numDivs').addEventListener('change', rebuildTeamInputs);
+  await prefillLeagueId('sleeperLeagueIdInput');
 });
 
 // ─── Sleeper Import (Step 1) ──────────────────────────────────────────────────

@@ -13,31 +13,32 @@ A lightweight, client-side fantasy football commissioner utility.
 
 ```
 fantasy-commissioner/
-├── index.html          # Entry point
-├── css/
-│   └── styles.css      # All styles
-└── js/
-    ├── divisions.js    # Division randomizer (ported from Python)
-    ├── schedule.js     # Schedule generation + rivalry week logic
-    ├── sleeper.js      # Sleeper API integration
-    └── app.js          # UI wiring
+├── index.html, stats.html, history.html, dues.html, keepers.html, draft-research.html
+├── css/                 # Styles, one file per page plus shared styles.css
+├── js/                  # One file (or pair) per page, all vanilla JS
+├── api/                 # Vercel serverless functions (dues + season cache), see SETUP.md
+├── db/schema.sql         # Supabase schema
+└── package.json          # Only for api/'s dependencies — the frontend has no build step
 ```
 
 ## Running Locally
 
-No build step needed — pure HTML/CSS/JS.
+The frontend itself needs no build step — pure HTML/CSS/JS.
 
 ```bash
-# Option 1: Python simple server
+# Static frontend only (dues/history/stats pages will fall back to live
+# Sleeper fetches with no caching or persistence — see SETUP.md to wire up
+# the database-backed api/ functions with `vercel dev` instead)
 python3 -m http.server 8080
-
-# Option 2: Node
-npx serve .
 ```
 
 Then open `http://localhost:8080`.
 
 > **Note:** The Sleeper API (`api.sleeper.app`) requires CORS-enabled requests. Running from a local server (not `file://`) is required for the Sleeper integration to work.
+
+## Database
+
+The dues tracker and the history/stats pages' expensive-to-recompute results are backed by a small Postgres database (Supabase), reached through the serverless functions in `api/`. See [SETUP.md](SETUP.md) for the one-time account setup (Supabase project, schema, Vercel env vars) — required before those pages will persist anything.
 
 ## Deploying
 
@@ -46,12 +47,10 @@ Then open `http://localhost:8080`.
 npm i -g vercel
 vercel
 ```
+Vercel auto-detects `api/` and provisions serverless functions for it alongside the static frontend — no extra config needed, once the env vars from [SETUP.md](SETUP.md) are set.
 
-### Netlify
-Drag the `fantasy-commissioner/` folder into [app.netlify.com/drop](https://app.netlify.com/drop).
-
-### GitHub Pages
-Push to a repo, go to Settings → Pages → Deploy from branch (`main`, `/ (root)`).
+### Netlify / GitHub Pages
+Still work for the static frontend, but `api/` (dues persistence, history/stats caching) needs Vercel-style serverless function support and won't run there without adapting those functions to the target platform's equivalent.
 
 ## Sleeper Integration
 

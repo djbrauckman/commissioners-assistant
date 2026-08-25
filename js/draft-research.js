@@ -40,10 +40,9 @@ let keeperVorpSource  = 'actual';    // 'actual' | 'projected' — drives the ke
 let mockVorpSource    = 'projected'; // 'actual' | 'projected' — drives the mock draft builds
 let currentMocks = [];
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
   initNav('draft-research');
-  const saved = localStorage.getItem('lastLeagueId');
-  if (saved) document.getElementById('drLeagueId').value = saved;
+  await prefillLeagueId('drLeagueId');
   const savedAdp = localStorage.getItem(ADP_STORAGE_KEY);
   if (savedAdp) document.getElementById('adpInput').value = savedAdp;
   const savedMocks = localStorage.getItem(MOCK_IDS_STORAGE_KEY);

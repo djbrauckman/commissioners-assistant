@@ -14,10 +14,9 @@ let currentData    = null;
 let selectedRoster = null;
 let activeTab      = 'regular'; // 'regular' | 'playoffs'
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
   initNav('stats');
-  const saved = localStorage.getItem('lastLeagueId');
-  if (saved) document.getElementById('statsLeagueId').value = saved;
+  await prefillLeagueId('statsLeagueId');
 });
 
 // ─── Load ─────────────────────────────────────────────────────────────────────

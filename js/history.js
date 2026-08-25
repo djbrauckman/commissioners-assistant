@@ -226,13 +226,36 @@ async function loadLeagueHistory(leagueId, onProgress = () => {}) {
   onProgress(2, 'Loading league chain...');
   const chain = await fetchLeagueChain(leagueId);
 
+  // Cache is keyed by each season's own (immutable) league_id, not whatever
+  // root leagueId the user typed in — Sleeper mints a new one every season.
+  let cached = {};
+  try {
+    const ids = chain.map(l => l.league_id).join(',');
+    cached = await dbGet(`/api/season-cache?league_ids=${encodeURIComponent(ids)}&kind=history`);
+  } catch (e) {
+    console.error('History cache unavailable, falling back to a live fetch for every season:', e);
+  }
+
   const seasons = [];
   const perSeasonProgress = Math.floor(90 / chain.length);
 
   for (let i = 0; i < chain.length; i++) {
     const league = chain[i];
     const base   = 5 + i * perSeasonProgress;
-    const data   = await fetchSeasonData(league, onProgress, base, perSeasonProgress - 2);
+
+    let data = cached[league.season];
+    if (data) {
+      onProgress(base + perSeasonProgress - 2, `${league.season} — loaded from cache`);
+    } else {
+      data = await fetchSeasonData(league, onProgress, base, perSeasonProgress - 2);
+      if (league.status === 'complete') {
+        try {
+          await dbPost('/api/season-cache', { league_id: league.league_id, season: league.season, kind: 'history', data });
+        } catch (e) {
+          console.error(`Failed to cache ${league.season} history:`, e);
+        }
+      }
+    }
     seasons.push(data);
   }
 

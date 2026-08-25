@@ -9,33 +9,9 @@
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="css/styles.css" />
   <link rel="stylesheet" href="css/stats.css" />
-  <style>
-    .gate-overlay {
-      position: fixed; inset: 0; z-index: 9999;
-      background: var(--bg);
-      display: flex; align-items: center; justify-content: center;
-    }
-    .gate-box {
-      background: var(--surface); border: 1px solid var(--border);
-      border-radius: var(--radius-lg); box-shadow: var(--shadow-md);
-      padding: 28px; width: 260px; text-align: center;
-    }
-    .gate-box input { width: 100%; margin-bottom: 10px; }
-    .gate-box .btn-primary { width: 100%; }
-  </style>
 </head>
 <body>
-
-<!-- Casual deterrent only — not real security. See js/gate.js. -->
-<div class="gate-overlay" id="gateOverlay">
-  <div class="gate-box">
-    <input type="password" id="gatePassword" placeholder="Password" autocomplete="off" />
-    <button class="btn-primary" onclick="checkGatePassword()">Unlock</button>
-    <div id="gateError" class="warn" style="display:none">Nope.</div>
-  </div>
-</div>
-
-<div class="container stats-container" id="pageContent" style="display:none">
+<div class="container stats-container">
 
   <header class="app-header">
     <h1>Commissioner Assistant</h1>
@@ -206,8 +182,8 @@
 
 </div>
 
-<script src="js/gate.js"></script>
 <script src="js/nav.js"></script>
+<script src="js/db-client.js"></script>
 <script src="js/draft-research.js"></script>
 </body>
 </html>

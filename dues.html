@@ -47,6 +47,10 @@
     </div>
     <div id="duesLoadError" class="warn" style="display:none;margin-top:8px"></div>
     <div id="duesLoadProgress" class="dues-progress">Fetching from Sleeper...</div>
+    <div id="duesImportPrompt" style="display:none;margin-top:8px;font-size:12px;color:var(--text-muted)">
+      Found existing dues data saved locally in this browser that isn't in the database yet.
+      <button class="btn-secondary" style="margin-left:6px;padding:2px 10px;font-size:12px" onclick="importLocalDuesToDb()">Import it →</button>
+    </div>
   </div>
 
   <!-- ── Step 2: Dues tracker ── -->
@@ -87,6 +91,7 @@
 </div>
 
 <script src="js/nav.js"></script>
+<script src="js/db-client.js"></script>
 <script src="js/dues.js"></script>
 </body>
 </html>

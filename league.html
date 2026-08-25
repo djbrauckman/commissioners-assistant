@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>League — Commissioner Assistant</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+<div class="container">
+
+  <header class="app-header">
+    <h1>Commissioner Assistant</h1>
+    <p>Division randomizer · Schedule generator · Rivalry week</p>
+  </header>
+
+  <nav id="main-nav" style="display:flex; gap:6px; margin-bottom:2rem;"></nav>
+
+  <div class="card">
+    <div class="step-header">
+      <div class="step-badge">1</div>
+      <span class="step-title">Current league</span>
+    </div>
+    <div style="font-size:13px;color:var(--text-muted);margin-bottom:14px">
+      Set your Sleeper league ID once here — every other page defaults to it automatically, so you don't have to
+      re-paste it everywhere. Each page's field stays editable if you ever want to check a different league one-off;
+      that won't change what's saved here.
+    </div>
+
+    <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap">
+      <div style="flex:1;min-width:220px">
+        <div class="label">Sleeper league ID</div>
+        <input type="text" id="leagueIdInput" placeholder="e.g. 1367188507650428928" oninput="document.getElementById('leaguePreview').textContent=''" />
+      </div>
+      <button class="btn-secondary" onclick="handlePreviewClick()">Preview</button>
+      <button class="btn-primary" onclick="handleSaveLeague()">Save as current league →</button>
+    </div>
+    <div id="leaguePreview" class="status-info"></div>
+    <div id="leagueStatus" class="status-info"></div>
+  </div>
+
+</div>
+
+<script src="js/nav.js"></script>
+<script src="js/db-client.js"></script>
+<script src="js/league.js"></script>
+</body>
+</html>

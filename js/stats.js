@@ -234,6 +234,20 @@ async function loadManagerStats(leagueId, onProgress = () => {}) {
   onProgress(5, 'Fetching league info...');
   const { league, rosters, users } = await fetchLeagueData(leagueId);
 
+  // Completed seasons are immutable and expensive to recompute (a full
+  // week-by-week matchup + stats sweep) — check the cache before doing that.
+  if (league.status === 'complete') {
+    try {
+      const cached = await dbGet(`/api/season-cache?league_ids=${encodeURIComponent(league.league_id)}&kind=stats`);
+      if (cached[league.season]) {
+        onProgress(100, `${league.season} — loaded from cache`);
+        return cached[league.season];
+      }
+    } catch (e) {
+      console.error('Stats cache unavailable, falling back to a live fetch:', e);
+    }
+  }
+
   const season          = league.season;
   const leagueName      = league.name;
   const rosterPositions = league.roster_positions || [];
@@ -361,7 +375,7 @@ async function loadManagerStats(leagueId, onProgress = () => {}) {
 
   onProgress(100, 'Done');
 
-  return {
+  const result = {
     managers: Object.values(managers).sort((a, b) => b.wins - a.wins || b.fpts - a.fpts),
     season,
     leagueName,
@@ -369,4 +383,14 @@ async function loadManagerStats(leagueId, onProgress = () => {}) {
     rosterPositions,
     hasBracket: brackets.winners.length > 0,
   };
+
+  if (league.status === 'complete') {
+    try {
+      await dbPost('/api/season-cache', { league_id: league.league_id, season, kind: 'stats', data: result });
+    } catch (e) {
+      console.error(`Failed to cache ${season} stats:`, e);
+    }
+  }
+
+  return result;
 }

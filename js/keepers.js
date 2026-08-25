@@ -21,10 +21,9 @@ const PLAYERS_CACHE_DATE_KEY = 'sleeper_players_cache_date';
 
 let currentKeepersData = null;
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
   initNav('keepers');
-  const saved = localStorage.getItem('lastLeagueId');
-  if (saved) document.getElementById('keepersLeagueId').value = saved;
+  await prefillLeagueId('keepersLeagueId');
 });
 
 // ─── API helpers ──────────────────────────────────────────────────────────────

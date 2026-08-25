@@ -18,12 +18,9 @@ let payouts    = { first: 0, second: 0, third: 0 };
 
 // ─── Init ─────────────────────────────────────────────────────────────────────
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
   initNav('dues');
-
-  // Pre-fill league ID if saved
-  const saved = localStorage.getItem('lastLeagueId');
-  if (saved) document.getElementById('duesLeagueId').value = saved;
+  await prefillLeagueId('duesLeagueId');
 });
 
 // ─── Load ─────────────────────────────────────────────────────────────────────
@@ -44,6 +41,7 @@ async function handleDuesLoad() {
 
   errEl.style.display = 'none';
   progEl.style.display = 'block';
+  document.getElementById('duesImportPrompt').style.display = 'none';
 
   try {
     // Walk previous_league_id chain if season specified
@@ -65,8 +63,8 @@ async function handleDuesLoad() {
     const userMap = {};
     users.forEach(u => { userMap[u.user_id] = u.display_name; });
 
-    // Load saved payment state from localStorage
-    const saved = loadSavedState();
+    // Load saved payment state from the DB (source of truth going forward).
+    const saved = await loadSavedState();
 
     managers = rosters
       .sort((a, b) => a.roster_id - b.roster_id)
@@ -85,6 +83,12 @@ async function handleDuesLoad() {
 
     renderDuesTracker();
     document.getElementById('duesTracker').style.display = 'block';
+
+    // If the DB had nothing but this browser has old local data for this
+    // league/season (from before the DB migration), offer to bring it up.
+    if (!saved.fromDb && loadLocalStorageBackup()) {
+      document.getElementById('duesImportPrompt').style.display = 'block';
+    }
 
   } catch (err) {
     progEl.style.display = 'none';
@@ -255,20 +259,48 @@ function updatePayout(key, value) {
 }
 
 // ─── Persistence ──────────────────────────────────────────────────────────────
+// Source of truth is the DB (via api/dues.js). Every save also mirrors to
+// localStorage so nothing is lost if a save call fails offline; that mirror
+// is also what importLocalDuesToDb() can recover from pre-migration data.
 
 function storageKey() {
   return `dues_${leagueId}_${season}`;
 }
 
-function saveState() {
+async function saveState() {
   const paid = {};
   managers.forEach(m => { paid[m.rosterId] = m.paid; });
   localStorage.setItem(storageKey(), JSON.stringify({ paid, payouts }));
+  try {
+    await dbPost('/api/dues', { league_id: leagueId, season, duesAmount, payouts, paid });
+  } catch (e) {
+    console.error('Failed to save dues to the database (kept locally, will retry on next save):', e);
+  }
 }
 
-function loadSavedState() {
+function loadLocalStorageBackup() {
   const raw = localStorage.getItem(storageKey());
-  return raw ? JSON.parse(raw) : {};
+  return raw ? JSON.parse(raw) : null;
+}
+
+async function loadSavedState() {
+  try {
+    const remote = await dbGet(`/api/dues?league_id=${encodeURIComponent(leagueId)}&season=${encodeURIComponent(season)}`);
+    if (remote) return { paid: remote.paid, payouts: remote.payouts, fromDb: true };
+  } catch (e) {
+    console.error('Failed to load dues from the database:', e);
+  }
+  return {};
+}
+
+async function importLocalDuesToDb() {
+  const local = loadLocalStorageBackup();
+  if (!local) return;
+  managers.forEach(m => { m.paid = local.paid?.[m.rosterId] ?? m.paid; });
+  payouts = local.payouts || payouts;
+  await saveState();
+  document.getElementById('duesImportPrompt').style.display = 'none';
+  renderDuesTracker();
 }
 
 function resetDues() {
