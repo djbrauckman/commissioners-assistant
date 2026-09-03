@@ -43,6 +43,33 @@ create table if not exists app_settings (
   updated_at timestamptz not null default now()
 );
 
+-- NFL-wide (not keyed by sleeper_league_id — these are properties of the
+-- real game, not any particular fantasy league) weekly advanced metrics
+-- sourced from nflverse. target_share/air_yards_share/wopr come straight
+-- from nflverse's stats_player_week file; routes_run/yprr are approximated
+-- from pbp_participation (on-field participation during charted dropback
+-- plays for WR/TE/RB — there's no public "true routes run" feed). See
+-- api/advanced-metrics.js.
+create table if not exists player_weekly_advanced (
+  season text not null,
+  week int not null,
+  gsis_id text not null,
+  player_name text not null,
+  position text not null,
+  team text not null,
+  targets int,
+  receptions int,
+  receiving_yards int,
+  target_share numeric,
+  air_yards_share numeric,
+  wopr numeric,
+  routes_run int,
+  yprr numeric,
+  updated_at timestamptz not null default now(),
+  primary key (season, week, gsis_id)
+);
+
 alter table dues_state disable row level security;
 alter table season_cache disable row level security;
 alter table app_settings disable row level security;
+alter table player_weekly_advanced disable row level security;

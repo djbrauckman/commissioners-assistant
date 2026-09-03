@@ -1,15 +1,16 @@
 # Database setup (Supabase)
 
-The dues tracker and history/stats pages are backed by a small Postgres
-database via Supabase, accessed through Vercel serverless functions in
-`api/`. The frontend itself is still plain static HTML/JS — this only adds
-a thin backend layer behind it. None of the account-side steps below can be
-done from the repo itself; they need your own Supabase and Vercel accounts.
+The dues tracker, history/stats pages, the site-wide current league, and the
+In-Season advanced metrics page are all backed by a small Postgres database
+via Supabase, accessed through Vercel serverless functions in `api/`. The
+frontend itself is still plain static HTML/JS — this only adds a thin
+backend layer behind it. None of the account-side steps below can be done
+from the repo itself; they need your own Supabase and Vercel accounts.
 
 ## 1. Create the Supabase project
 
 1. Create a project at [supabase.com](https://supabase.com) (free tier is plenty for this).
-2. Open the SQL editor and run everything in [`db/schema.sql`](db/schema.sql). This creates two tables: `dues_state` and `season_cache`.
+2. Open the SQL editor and run everything in [`db/schema.sql`](db/schema.sql). This creates the tables: `dues_state`, `season_cache`, `app_settings`, `player_weekly_advanced`. (Re-run it any time the schema file changes — every statement is `if not exists`/idempotent.)
 3. In Project Settings → API, note down:
    - **Project URL** → this is `SUPABASE_URL`
    - **service_role key** (not the `anon` key — the service role key bypasses row-level security and must never be exposed to the browser) → this is `SUPABASE_SERVICE_ROLE_KEY`
@@ -52,3 +53,9 @@ vercel dev
 
 - **`dues_state`** — the actual source of truth for who's paid and the payout split. Every toggle/edit writes through immediately.
 - **`season_cache`** — a pure cache of expensive-to-recompute, fully Sleeper-derived results (`history.js`'s per-season standings/bracket/H2H, `stats.js`'s per-manager weekly breakdown). Only ever written for seasons Sleeper reports as `status: "complete"` — the current in-progress season is always fetched live and never cached, since it isn't done changing. If a completed season's cache ever looks wrong, just delete that row from `season_cache` in Supabase and the next page load will recompute and re-cache it.
+- **`app_settings`** — small site-wide key/value preferences (currently just `current_league_id`, set from `league.html`).
+- **`player_weekly_advanced`** — nflverse-derived advanced metrics (target share, air yards share, WOPR, an approximated routes-run/YPRR — see `db/schema.sql`'s comment on that approximation). Only ever populated by explicitly clicking "Run aggregation" on `in-season.html` — nothing polls automatically. Safe to click repeatedly; it always picks up from the last cached week for that season and no-ops if there's nothing new.
+
+## A note on `api/advanced-metrics.js`
+
+Its `POST` (the aggregation trigger) downloads two nflverse CSV files — one is a whole season's worth of weekly player stats, growing as the season progresses (currently a few MB, will keep growing week to week) — then parses and computes in the same request. It's set to `maxDuration: 60` (Vercel's per-function timeout), which should be comfortable most of the season, but if it ever times out late in the year, that's the thing to look at first (splitting the fetch/parse/upsert into smaller steps, or moving to a paid Vercel tier with a higher ceiling).

@@ -1,8 +1,9 @@
 {
   "name": "commissioners-assistant",
   "private": true,
-  "description": "Serverless API functions for the Commissioner Assistant (Supabase-backed dues persistence + history/stats caching). The frontend itself is plain static HTML/CSS/JS with no build step.",
+  "description": "Serverless API functions for the Commissioner Assistant (Supabase-backed dues persistence, history/stats caching, app settings, and nflverse-derived advanced metrics). The frontend itself is plain static HTML/CSS/JS with no build step.",
   "dependencies": {
-    "@supabase/supabase-js": "^2.45.0"
+    "@supabase/supabase-js": "^2.45.0",
+    "csv-parse": "^5.5.0"
   }
 }

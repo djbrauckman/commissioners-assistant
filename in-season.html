@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>In-Season — Commissioner Assistant</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/styles.css" />
+  <link rel="stylesheet" href="css/stats.css" />
+</head>
+<body>
+<div class="container stats-container">
+
+  <header class="app-header">
+    <h1>Commissioner Assistant</h1>
+    <p>Division randomizer · Schedule generator · Rivalry week</p>
+  </header>
+
+  <nav id="main-nav" style="display:flex; gap:6px; margin-bottom:2rem;"></nav>
+
+  <div class="card">
+    <div class="step-header">
+      <div class="step-badge">1</div>
+      <span class="step-title">Advanced weekly metrics</span>
+    </div>
+    <div class="section-meta" style="margin-bottom:12px">
+      Target share, air yards share, WOPR, and yards per route run (YPRR), sourced from
+      <a href="https://github.com/nflverse/nflverse-data" target="_blank" rel="noopener">nflverse</a>'s public data.
+      Nothing polls automatically — click "Run aggregation" (e.g. once a Monday/Tuesday after games finalize) and it
+      pulls in whatever weeks aren't cached yet, catching you up in one go if you missed a week. Routes run is an
+      approximation (on-field participation during charted dropback plays for WR/TE/RB) — there's no public feed of
+      true team route charting, so treat YPRR as directionally right, not exact.
+    </div>
+
+    <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;margin-bottom:10px">
+      <div>
+        <div class="label">Season</div>
+        <input type="text" id="seasonInput" placeholder="e.g. 2025" style="width:120px" />
+      </div>
+      <button class="btn-primary" onclick="handleRunAggregation()">Run aggregation →</button>
+      <button class="btn-secondary" onclick="handleLoadCached()">Reload cached data</button>
+    </div>
+    <div id="runStatus" class="status-info"></div>
+  </div>
+
+  <div class="card" style="margin-top:1.5rem">
+    <div class="section-header" style="margin-bottom:12px">
+      <div>
+        <div class="section-title">Season-to-date, per player</div>
+        <div class="section-meta" id="cacheMeta"></div>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;align-items:center">
+      <div id="posFilterBar" style="display:flex;gap:6px;flex-wrap:wrap"></div>
+      <input type="text" id="playerSearch" placeholder="Search player..." oninput="renderTable()" style="max-width:200px;margin-left:auto" />
+    </div>
+
+    <div class="weekly-table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Player</th><th>Pos</th><th>Team</th><th>Wks</th><th>Tgt</th><th>Rec</th><th>Rec Yd</th>
+            <th>Tgt Share</th><th>Air Yd Share</th><th>WOPR</th><th>Routes</th><th>YPRR</th>
+          </tr>
+        </thead>
+        <tbody id="metricsTbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<script src="js/nav.js"></script>
+<script src="js/db-client.js"></script>
+<script src="js/in-season.js"></script>
+</body>
+</html>
