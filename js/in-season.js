@@ -29,19 +29,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 // ─── Season resolution ──────────────────────────────────────────────────────
 
 async function prefillSeason() {
-  try {
-    const setting = await dbGet('/api/settings?key=current_league_id');
-    if (setting && setting.value) {
-      const league = await fetch(`https://api.sleeper.app/v1/league/${setting.value}`).then(r => r.json());
-      if (league && league.season) {
-        document.getElementById('seasonInput').value = league.season;
-        return;
-      }
-    }
-  } catch (e) {
-    // No current league set (or DB unreachable) — leave the field blank
-    // for manual entry.
-  }
+  const season = await getCurrentSeason();
+  if (season) document.getElementById('seasonInput').value = season;
 }
 
 // ─── Load cached data ───────────────────────────────────────────────────────

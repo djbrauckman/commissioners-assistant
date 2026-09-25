@@ -69,7 +69,26 @@ create table if not exists player_weekly_advanced (
   primary key (season, week, gsis_id)
 );
 
+-- Personal log of start/sit decisions for gut-check.html: the player you
+-- played vs. the player you considered, each with their outcome (points),
+-- plus a note on the process. points_diff (played minus considered) is a
+-- generated column so it can't drift out of sync when an entry is edited —
+-- positive means the call beat the alternative.
+create table if not exists gut_check (
+  id bigint generated always as identity primary key,
+  season text not null,
+  week int not null,
+  played_player text not null,
+  played_points numeric not null,
+  considered_player text not null,
+  considered_points numeric not null,
+  points_diff numeric generated always as (played_points - considered_points) stored,
+  process_note text not null default '',
+  created_at timestamptz not null default now()
+);
+
 alter table dues_state disable row level security;
 alter table season_cache disable row level security;
 alter table app_settings disable row level security;
 alter table player_weekly_advanced disable row level security;
+alter table gut_check disable row level security;

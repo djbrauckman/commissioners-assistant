@@ -10,7 +10,7 @@ from the repo itself; they need your own Supabase and Vercel accounts.
 ## 1. Create the Supabase project
 
 1. Create a project at [supabase.com](https://supabase.com) (free tier is plenty for this).
-2. Open the SQL editor and run everything in [`db/schema.sql`](db/schema.sql). This creates the tables: `dues_state`, `season_cache`, `app_settings`, `player_weekly_advanced`. (Re-run it any time the schema file changes — every statement is `if not exists`/idempotent.)
+2. Open the SQL editor and run everything in [`db/schema.sql`](db/schema.sql). This creates the tables: `dues_state`, `season_cache`, `app_settings`, `player_weekly_advanced`, `gut_check`. (Re-run it any time the schema file changes — every statement is `if not exists`/idempotent.)
 3. In Project Settings → API, note down:
    - **Project URL** → this is `SUPABASE_URL`
    - **service_role key** (not the `anon` key — the service role key bypasses row-level security and must never be exposed to the browser) → this is `SUPABASE_SERVICE_ROLE_KEY`
@@ -55,6 +55,7 @@ vercel dev
 - **`season_cache`** — a pure cache of expensive-to-recompute, fully Sleeper-derived results (`history.js`'s per-season standings/bracket/H2H, `stats.js`'s per-manager weekly breakdown). Only ever written for seasons Sleeper reports as `status: "complete"` — the current in-progress season is always fetched live and never cached, since it isn't done changing. If a completed season's cache ever looks wrong, just delete that row from `season_cache` in Supabase and the next page load will recompute and re-cache it.
 - **`app_settings`** — small site-wide key/value preferences (currently just `current_league_id`, set from `league.html`).
 - **`player_weekly_advanced`** — nflverse-derived advanced metrics (target share, air yards share, WOPR, an approximated routes-run/YPRR — see `db/schema.sql`'s comment on that approximation). Only ever populated by explicitly clicking "Run aggregation" on `in-season.html` — nothing polls automatically. Safe to click repeatedly; it always picks up from the last cached week for that season and no-ops if there's nothing new.
+- **`gut_check`** — your own log of start/sit decisions (player played vs. player considered, outcomes, process note). Entered by hand on `gut-check.html`; `points_diff` is a Postgres generated column, so it can't drift out of sync when an entry is edited.
 
 ## A note on `api/advanced-metrics.js`
 

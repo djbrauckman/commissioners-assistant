@@ -13,6 +13,7 @@ const NAV_LINKS = [
   { key: 'keepers',  label: 'Keepers',  href: 'keepers.html' },
   { key: 'draft-research', label: 'Draft Research', href: 'draft-research.html' },
   { key: 'in-season', label: 'In-Season', href: 'in-season.html' },
+  { key: 'gut-check', label: 'Gut Check', href: 'gut-check.html' },
 ];
 
 function initNav(activePage) {

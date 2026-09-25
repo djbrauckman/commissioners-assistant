@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Gut Check — Commissioner Assistant</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/styles.css" />
+  <link rel="stylesheet" href="css/stats.css" />
+  <style>
+    .gc-form { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-bottom: 10px; }
+    .gc-form .wide { grid-column: 1 / -1; }
+    .gc-form textarea {
+      width: 100%; min-height: 64px; padding: 10px; resize: vertical;
+      font-family: inherit; font-size: 13px; color: var(--text);
+      background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius-md);
+    }
+    .gc-diff {
+      display: inline-block; min-width: 56px; text-align: center; padding: 2px 8px;
+      border-radius: 6px; font-weight: 600;
+    }
+    .gc-good { background: var(--green-bg); color: var(--green-text); }
+    .gc-even { background: var(--amber-bg); color: var(--amber-text); }
+    .gc-bad  { background: var(--red-bg);   color: var(--red); }
+    .gc-note { white-space: pre-wrap; font-family: 'DM Sans', sans-serif; font-size: 13px; min-width: 200px; }
+    .gc-actions button { padding: 2px 8px; font-size: 12px; }
+  </style>
+</head>
+<body>
+<div class="container stats-container">
+
+  <header class="app-header">
+    <h1>Commissioner Assistant</h1>
+    <p>Division randomizer · Schedule generator · Rivalry week</p>
+  </header>
+
+  <nav id="main-nav" style="display:flex; gap:6px; margin-bottom:2rem;"></nav>
+
+  <div class="card">
+    <div class="step-header">
+      <div class="step-badge" id="formBadge">+</div>
+      <span class="step-title" id="formTitle">Log a decision</span>
+    </div>
+    <div class="section-meta" style="margin-bottom:12px">
+      Pick two players you weighed against each other, record how each one did, and write down why you chose the
+      way you did. Points gained is <em>played − considered</em>: green means your call beat the alternative by 2+
+      points, red means it cost you 2+, and anything closer than that is yellow (negligible).
+    </div>
+
+    <div class="gc-form">
+      <div>
+        <div class="label">Season</div>
+        <input type="text" id="seasonInput" placeholder="2026" onchange="loadEntries()" />
+      </div>
+      <div>
+        <div class="label">Week</div>
+        <input type="number" id="weekInput" min="1" max="18" placeholder="1" />
+      </div>
+      <div>
+        <div class="label">Player played</div>
+        <input type="text" id="playedName" />
+      </div>
+      <div>
+        <div class="label">Their points</div>
+        <input type="number" id="playedPts" step="0.01" />
+      </div>
+      <div>
+        <div class="label">Player considered</div>
+        <input type="text" id="consideredName" />
+      </div>
+      <div>
+        <div class="label">Their points</div>
+        <input type="number" id="consideredPts" step="0.01" />
+      </div>
+      <div class="wide">
+        <div class="label">Process note</div>
+        <textarea id="processNote" placeholder="What you weighed — matchup, injury report, usage, gut feel..."></textarea>
+      </div>
+    </div>
+
+    <div class="btn-row" style="margin-top:0">
+      <button class="btn-primary" id="saveBtn" onclick="handleSave()">Save entry →</button>
+      <button class="btn-secondary" id="cancelBtn" onclick="cancelEdit()" style="display:none">Cancel edit</button>
+    </div>
+    <div id="formStatus" class="status-info"></div>
+  </div>
+
+  <div class="card" style="margin-top:1.5rem">
+    <div class="section-header" style="margin-bottom:12px">
+      <div>
+        <div class="section-title">Decision log</div>
+        <div class="section-meta" id="listMeta"></div>
+      </div>
+    </div>
+
+    <div class="stat-bar" id="summaryChips"></div>
+
+    <div class="weekly-table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Wk</th><th>Played</th><th>Pts</th><th>Considered</th><th>Pts</th>
+            <th>Gained / lost</th><th>Process note</th><th></th>
+          </tr>
+        </thead>
+        <tbody id="entriesTbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<script src="js/nav.js"></script>
+<script src="js/db-client.js"></script>
+<script src="js/gut-check.js"></script>
+</body>
+</html>

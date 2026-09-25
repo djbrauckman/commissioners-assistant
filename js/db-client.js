@@ -37,6 +37,26 @@ function dbPost(path, body) {
   return dbFetch(path, { method: 'POST', body: JSON.stringify(body) });
 }
 
+function dbDelete(path) {
+  return dbFetch(path, { method: 'DELETE' });
+}
+
+/**
+ * The season of the site-wide current league (set on league.html), or null
+ * if none is set / the DB or Sleeper is unreachable — callers leave their
+ * season field blank for manual entry in that case.
+ */
+async function getCurrentSeason() {
+  try {
+    const setting = await dbGet('/api/settings?key=current_league_id');
+    if (!setting || !setting.value) return null;
+    const league = await fetch(`https://api.sleeper.app/v1/league/${setting.value}`).then(r => r.json());
+    return league && league.season ? league.season : null;
+  } catch (e) {
+    return null;
+  }
+}
+
 /**
  * Fills a "Sleeper league ID" input with the site-wide current league (set
  * on league.html), falling back to this browser's local cache if the DB is
